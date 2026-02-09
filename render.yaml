@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: phoenix-backend
+    runtime: python
+    buildCommand: pip install -r requirements-light.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: PYTHON_VERSION
+        value: 3.10.0
+    rootDir: backend
+
+  - type: web
+    name: phoenix-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    rootDir: frontend
