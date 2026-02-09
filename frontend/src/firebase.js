@@ -5,13 +5,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAxYxzXTgrHWDXLWve6ldkNb4b6bKZ8eec",
-  authDomain: "phoenix-4d0e9.firebaseapp.com",
-  projectId: "phoenix-4d0e9",
-  storageBucket: "phoenix-4d0e9.firebasestorage.app",
-  messagingSenderId: "780546102728",
-  appId: "1:780546102728:web:27359fd199ffcac325dcfd",
-  measurementId: "G-V1E3QYG7MG"
+  apiKey: "AIzaSyBZywnI16E3EjBaTlSLrsi1abD5Rmxu_5o",
+  authDomain: "pheonix-web-53172.firebaseapp.com",
+  projectId: "pheonix-web-53172",
+  storageBucket: "pheonix-web-53172.firebasestorage.app",
+  messagingSenderId: "236113511528",
+  appId: "1:236113511528:web:a98f2de9c9ca11871c67dd",
+  measurementId: "G-9CJQ2R7JK2"
 };
 
 // Initialize Firebase
