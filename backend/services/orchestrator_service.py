@@ -10,7 +10,7 @@ from typing import List, Dict, Any
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 import google.generativeai as genai
-import google.generativeai.protos as protos
+import google.ai.generativelanguage as protos
 from google.protobuf import struct_pb2
 from config import GOOGLE_API_KEY
 import os
