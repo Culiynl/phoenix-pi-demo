@@ -80,8 +80,10 @@ AIZYNTH_CONFIG = os.path.join(AIZYNTH_FOLDER, "config.yml")
 AIZYNTH_ENV_PYTHON = r"F:\PyMol\envs\aizynth-env\python.exe"
 AIZYNTH_CLI = r"F:\PyMol\envs\aizynth-env\Scripts\aizynthcli.exe"
 
-# --- 5. API KEYS & SECRETS ---
-GOOGLE_API_KEY = "AIzaSyBIAIbvC5EKpQVRsGnuPGAjVQD_wkg1yEc" 
+from dotenv import load_dotenv
+import os
+load_dotenv() # This loads the .env file locally
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 ENTREZ_EMAIL = "your.email@example.com"
 
 CHECKPOINT_PATH = os.path.join(MODEL_CHECKPOINTS, "feudal_model.pt")
