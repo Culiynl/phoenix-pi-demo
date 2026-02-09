@@ -18,3 +18,4 @@ torch==2.0.1+cpu
 selfies
 meeko
 scipy
+gemmi
