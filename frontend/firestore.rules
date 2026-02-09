@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow anyone signed in to read/write missions
+    // In production, you might want to restrict this further (e.g. only own missions)
+    match /missions/{missionId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Default deny for other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

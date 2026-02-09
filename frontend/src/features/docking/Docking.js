@@ -1,0 +1,401 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { createPluginUI } from 'molstar/lib/mol-plugin-ui';
+import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
+import { renderReact18 } from 'molstar/lib/mol-plugin-ui/react18';
+import 'molstar/lib/mol-plugin-ui/skin/dark.scss';
+import { Script } from 'molstar/lib/mol-script/script';
+
+const Docking = () => {
+    const { projectId } = useParams();
+    const navigate = useNavigate();
+    const parentRef = useRef(null);
+    const pluginRef = useRef(null);
+    const initStartedRef = useRef(false); // Guard to prevent double init in StrictMode
+
+    // --- State: Search & Import ---
+    const [pdbSearch, setPdbSearch] = useState("");
+    const [searchResults, setSearchResults] = useState([]);
+    // const [isSearching, setIsSearching] = useState(false); // Removed unused
+    const [loading, setLoading] = useState(false);
+
+    // --- State: P2Rank & Pockets ---
+    const [pockets, setPockets] = useState([]);
+    const [dockingCenter, setDockingCenter] = useState(null);
+    const [p2rankLogs, setP2rankLogs] = useState([]);
+    const p2LogEndRef = useRef(null);
+
+    // --- State: Vina Docking ---
+    const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
+    const [poses, setPoses] = useState([]);
+    const [activePose, setActivePose] = useState(0);
+    const [lastResultUrls, setLastResultUrls] = useState(null);
+    // const [isPluginReady, setIsPluginReady] = useState(false); // Removed unused
+
+    // useEffect(() => {
+    //     p2LogEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // }, [p2rankLogs]);
+
+    const getFormat = (url) => {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.endsWith('.cif') || lowerUrl.endsWith('.bcif')) return 'mmcif';
+        return 'pdb';
+    };
+
+    // 1. Initialize Molstar
+    useEffect(() => {
+        // Prevent double initialization
+        if (initStartedRef.current || pluginRef.current) return;
+        initStartedRef.current = true;
+
+        async function init() {
+            const spec = DefaultPluginUISpec();
+            spec.layout = {
+                initialShowControls: false,
+                initialShowRemoteState: false,
+                initialShowSequence: false,
+                initialShowLog: false,
+                initialShowLeftPanel: false,
+            };
+            spec.components = { remoteState: 'none', sequence: 'none', log: 'none' };
+
+            try {
+                const ctx = await createPluginUI({
+                    target: parentRef.current,
+                    spec: spec,
+                    render: renderReact18
+                });
+                pluginRef.current = ctx;
+                // setIsPluginReady(true); // Unused
+            } catch (error) {
+                console.error("Molstar Init Error:", error);
+            }
+        }
+        init();
+
+        return () => {
+            if (pluginRef.current) {
+                pluginRef.current.dispose();
+                pluginRef.current = null;
+            }
+            initStartedRef.current = false;
+        };
+    }, []);
+
+    // 2. RCSB Search Logic
+    const handlePdbSearch = async () => {
+        if (!pdbSearch) return;
+        // setIsSearching(true); // Unused
+        try {
+            const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${baseUrl}/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
+            const data = await res.json();
+            setSearchResults(data || []);
+        } catch (e) { alert("Search failed."); }
+        // setIsSearching(false); // Unused
+    };
+
+    // FIXED: Uses mmCIF (.cif) for previews to support newer structures like 9BA8
+    const handlePreview = (pdbId) => {
+        const url = `https://files.rcsb.org/download/${pdbId.toUpperCase()}.cif`;
+        loadPdbFromUrl(url);
+    };
+
+    const handleImport = async (pdbId) => {
+        setLoading(true);
+        try {
+            const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            const res = await fetch(`${baseUrl}/api/pdb/fetch/${pdbId.toUpperCase()}`);
+            if (!res.ok) throw new Error("Structure not found on RCSB");
+
+            const data = await res.json();
+            alert(`Structure imported: ${data.filename}`);
+            setPdbSearch(data.filename);
+            loadPdbIntoViewer(`/static/proteins/${data.filename}`);
+        } catch (e) { alert(e.message); }
+        setLoading(false);
+    };
+
+    // 3. Visualization Helpers
+    const loadPdbFromUrl = async (url) => {
+        if (!pluginRef.current) return;
+        const plugin = pluginRef.current;
+        const format = getFormat(url);
+
+        try {
+            await plugin.clear();
+            const data = await plugin.builders.data.download({ url }, { state: { isGhost: true } });
+            // This is where "Invalid data cell" happened. We use the dynamic format now.
+            const trajectory = await plugin.builders.structure.parseTrajectory(data, format);
+            await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
+        } catch (e) {
+            console.error("Preview failed", e);
+            alert("Visualization Error: This structure format may be unsupported for preview.");
+        }
+    };
+
+    const loadPdbIntoViewer = async (relativeUrl) => {
+        if (!pluginRef.current) return;
+        const plugin = pluginRef.current;
+        const format = getFormat(relativeUrl);
+        try {
+            await plugin.clear();
+            const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            const data = await plugin.builders.data.download({ url: `${baseUrl}${relativeUrl}` });
+            const trajectory = await plugin.builders.structure.parseTrajectory(data, format);
+            await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
+        } catch (e) { console.error("Viewer failed", e); }
+    };
+
+    const handleRunP2Rank = async () => {
+        // GUARD: Stop if projectId is missing
+        if (!projectId || projectId === "undefined") {
+            alert("Error: Project ID is undefined. Please reload from the dashboard.");
+            return;
+        }
+        if (!pdbSearch) return alert("Select or Import a protein first.");
+
+        setLoading(true);
+        setPockets([]);
+        setP2rankLogs([{ msg: "Initializing P2Rank process...", type: "info" }]);
+
+        try {
+            // Ensure projectId is passed here
+            const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            await fetch(`${baseUrl}/api/p2rank/run?pdb_filename=${pdbSearch}&project_id=${projectId}`, {
+                method: 'POST'
+            });
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    // Fix: template literal was likely missing the variable or it was null
+                    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+                    const logRes = await fetch(`${baseUrl}/api/p2rank/status/${projectId}`);
+                    const logs = await logRes.json();
+                    setP2rankLogs(logs);
+
+                    const res = await fetch(`${baseUrl}/api/p2rank/results?pdb_filename=${pdbSearch}&project_id=${projectId}`);
+                    if (res.status === 200) {
+                        const data = await res.json();
+                        setPockets(data);
+                        if (data.length > 0) {
+                            setDockingCenter({ x: data[0].center_x, y: data[0].center_y, z: data[0].center_z });
+                            highlightPocket(data[0].residue_ids);
+                        }
+                        clearInterval(pollInterval);
+                        setLoading(false);
+                    }
+
+                    const lastLog = logs[logs.length - 1]?.msg.toLowerCase();
+                    if (lastLog?.includes("complete") || lastLog?.includes("failed")) {
+                        clearInterval(pollInterval);
+                        setLoading(false);
+                    }
+                } catch (err) { console.error("Polling error:", err); }
+            }, 3000);
+
+        } catch (e) {
+            setLoading(false);
+            alert("Server error.");
+        }
+    };
+
+    const highlightPocket = async (residueIdsString) => {
+        if (!pluginRef.current || !residueIdsString) return;
+        const plugin = pluginRef.current;
+        const segments = residueIdsString.split(' ').map(s => {
+            const [chain, resIdx] = s.split('_');
+            return { auth_asym_id: chain, auth_seq_id: parseInt(resIdx) };
+        });
+
+        try {
+            const data = plugin.managers.structure.hierarchy.current.structures[0].cell.obj.data;
+            const sel = Script.getStructureSelection(Q => Q.struct.generator.atomGroups({
+                'residue-test': Q.core.set.has([Q.set(...segments.map(s => s.auth_seq_id)), Q.ammp('auth_seq_id')]),
+                'chain-test': Q.core.set.has([Q.set(...segments.map(s => s.auth_asym_id)), Q.ammp('auth_asym_id')])
+            }), data);
+
+            plugin.managers.structure.selection.fromSelection(sel);
+            plugin.managers.camera.focusSelection(sel);
+        } catch (e) { console.error("Highlighting failed", e); }
+    };
+
+    // 5. Vina Docking Logic
+    const handleRunDocking = async () => {
+        setLoading(true);
+        try {
+            const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${baseUrl}/api/docking/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    project_id: String(projectId),
+                    smiles: smiles.trim(),
+                    center_override: dockingCenter
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                setLastResultUrls(data);
+                setPoses(data.scores.map((s, i) => ({ id: i, energy: s.toFixed(2) })));
+                setActivePose(0);
+                loadComplex(data.receptor_url, data.ligand_url, 0);
+            }
+        } catch (e) { alert("Docking Error"); }
+        setLoading(false);
+    };
+
+    const loadComplex = async (recUrl, ligUrl, idx) => {
+        const plugin = pluginRef.current;
+        await plugin.clear();
+        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+        const recData = await plugin.builders.data.download({ url: `${baseUrl}${recUrl}` });
+        const recStruct = await plugin.builders.structure.createStructure(await plugin.builders.structure.createModel(await plugin.builders.structure.parseTrajectory(recData, 'pdb')));
+        await plugin.builders.structure.representation.addRepresentation(recStruct, { type: 'cartoon', color: 'uniform', colorParams: { value: 0x3b82f6 } });
+
+        const ligData = await plugin.builders.data.download({ url: `${baseUrl}${ligUrl}` });
+        const ligTraj = await plugin.builders.structure.parseTrajectory(ligData, 'pdb');
+        const ligStruct = await plugin.builders.structure.createStructure(await plugin.builders.structure.createModel(ligTraj, { modelIndex: idx }));
+        await plugin.builders.structure.representation.addRepresentation(ligStruct, { type: 'ball-and-stick', color: 'element-symbol' });
+
+        plugin.managers.camera.reset();
+    };
+
+    return (
+        <div className="main-content">
+            <div className="docking-container-wrapper">
+
+                <div className="docking-header" style={{ justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <button className="primary-btn" onClick={() => navigate(`/dashboard/${projectId}`)}>← Back</button>
+                        <h2 style={{ margin: 0 }}>Structure Preparation & Pocket Analysis</h2>
+                    </div>
+                    {dockingCenter && (
+                        <div style={{ background: '#111', padding: '8px 15px', borderRadius: '8px', border: '1px solid #222', color: '#4ade80', fontSize: '0.8rem' }}>
+                            🎯 Active Docking Center: {dockingCenter.x.toFixed(1)}, {dockingCenter.y.toFixed(1)}, {dockingCenter.z.toFixed(1)}
+                        </div>
+                    )}
+                </div>
+
+                <div className="card">
+                    <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '15px' }}>RCSB PDB DATABASE & POCKET DETECTION</h3>
+                    <div className="action-group" style={{ marginBottom: '20px' }}>
+                        <input
+                            type="text"
+                            placeholder="Search keyword or ID (e.g. Alzheimer's, 6OD6)"
+                            className="technical-input"
+                            value={pdbSearch}
+                            onChange={(e) => setPdbSearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handlePdbSearch()}
+                        />
+                        <button className="primary-btn" style={{ background: 'var(--primary)', color: 'white' }} onClick={handlePdbSearch}>Search PDB</button>
+                        <button className="primary-btn" onClick={handleRunP2Rank} disabled={loading || !pdbSearch}>
+                            {loading ? "Analyzing..." : "Run P2Rank Analysis"}
+                        </button>
+                    </div>
+
+                    {searchResults.length > 0 && (
+                        <div className="technical-table-container" style={{ maxHeight: '300px', marginBottom: '20px' }}>
+                            <table className="technical-table">
+                                <thead><tr><th>ID</th><th>Description</th><th>Resolution</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    {searchResults.map(r => (
+                                        <tr key={r.id}>
+                                            <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{r.id}</td>
+                                            <td style={{ fontSize: '0.8rem' }}>{r.title}</td>
+                                            <td>{r.resolution ? `${r.resolution} Å` : 'N/A'}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                    <button className="primary-btn" onClick={() => handlePreview(r.id)}>Preview</button>
+                                                    <button className="primary-btn" style={{ background: '#4ade80', color: '#000' }} onClick={() => handleImport(r.id)}>Import</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {pockets.length > 0 && (
+                        <div className="technical-table-container" style={{ maxHeight: '400px' }}>
+                            <table className="technical-table">
+                                <thead><tr><th>Rank</th><th>Score</th><th>Prob.</th><th>Center (X,Y,Z)</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    {pockets.map(p => (
+                                        <tr key={p.rank} style={{ background: dockingCenter?.x === p.center_x ? 'rgba(59, 130, 246, 0.15)' : 'transparent' }}>
+                                            <td>#{p.rank}</td>
+                                            <td style={{ color: '#4ade80' }}>{p.score}</td>
+                                            <td>{(p.probability * 100).toFixed(1)}%</td>
+                                            <td style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>{p.center_x.toFixed(2)}, {p.center_y.toFixed(2)}, {p.center_z.toFixed(2)}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button className="primary-btn" onClick={() => highlightPocket(p.residue_ids)}>Focus</button>
+                                                    <button className="primary-btn" style={{ background: '#fff', color: '#000' }}
+                                                        onClick={() => setDockingCenter({ x: p.center_x, y: p.center_y, z: p.center_z })}>
+                                                        Target
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                <div className="card">
+                    <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>P2RANK LIVE CONSOLE</h3>
+                    <div className="feudal-log" style={{ height: '150px', marginTop: '10px', background: '#000', fontSize: '0.75rem' }}>
+                        {p2rankLogs.map((log, i) => (
+                            <div key={i} style={{ color: log.type === 'success' ? '#4ade80' : log.type === 'error' ? '#f87171' : '#aaa' }}>
+                                &gt; {log.msg}
+                            </div>
+                        ))}
+                        <div ref={p2LogEndRef} />
+                    </div>
+                </div>
+
+                <div className="docking-grid">
+                    <div className="card" style={{ height: '100%', padding: '24px' }}>
+                        <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '15px' }}>DOCKING EXECUTION</h3>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>LIGAND (SMILES)</label>
+                        <textarea
+                            className="technical-input"
+                            style={{ background: '#000', border: '1px solid var(--border)', color: 'white', padding: '12px', borderRadius: '6px', height: '100px', marginBottom: '20px', resize: 'none', fontFamily: 'monospace' }}
+                            value={smiles}
+                            onChange={(e) => setSmiles(e.target.value)}
+                        />
+                        <button
+                            className="primary-btn"
+                            style={{ width: '100%', padding: '15px', background: dockingCenter ? 'var(--primary)' : '#333', color: 'white' }}
+                            onClick={handleRunDocking}
+                            disabled={loading || !dockingCenter}
+                        >
+                            {loading ? "Running Simulation..." : "Start Auto-Centered Docking"}
+                        </button>
+                        {poses.length > 0 && (
+                            <div style={{ marginTop: '30px', flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '10px' }}>DOCKING POSES</h3>
+                                <div className="pose-table-container">
+                                    {poses.map((p) => (
+                                        <div key={p.id} className={`pose-row ${activePose === p.id ? 'active' : ''}`}
+                                            onClick={() => { setActivePose(p.id); loadComplex(lastResultUrls.receptor_url, lastResultUrls.ligand_url, p.id); }}>
+                                            <span className="pose-label">#{p.id + 1}</span>
+                                            <span>Energy: {p.energy}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="molstar-container" ref={parentRef} />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Docking;
