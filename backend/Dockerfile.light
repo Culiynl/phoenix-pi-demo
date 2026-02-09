@@ -1,0 +1,28 @@
+# Lightweight Deployment for Cloud Run
+
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install only lightweight dependencies
+COPY requirements-light.txt .
+RUN pip install --no-cache-dir -r requirements-light.txt
+
+# Copy only lightweight services
+COPY api.py .
+COPY config.py .
+COPY services/__init__.py services/
+COPY services/firebase_service.py services/
+COPY services/orchestrator_service.py services/
+COPY services/llm_service.py services/
+COPY services/multimodal_service.py services/
+COPY services/long_context_service.py services/
+
+# Create data directory
+RUN mkdir -p data/uploads
+
+# Expose port
+EXPOSE 8080
+
+# Run the application
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8080"]

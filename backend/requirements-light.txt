@@ -1,0 +1,13 @@
+# Lightweight dependencies for Cloud Run (no heavy ML models)
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+google-generativeai==0.3.2
+firebase-admin==6.3.0
+chembl-webresource-client==0.10.8
+arxiv==2.1.0
+httpx==0.25.1
+python-multipart==0.0.6
+Pillow==10.1.0
+
+# Basic cheminformatics (lightweight)
+rdkit==2023.9.1

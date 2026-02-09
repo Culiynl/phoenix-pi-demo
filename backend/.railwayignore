@@ -1,0 +1,63 @@
+# Railway Ignore File
+# Exclude large files and directories from deployment
+
+# Large model files
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+*.joblib
+
+# AiZynthFinder models and data
+aizynthfinder/
+models/
+*.hdf5
+
+# Data directories
+data/
+projects/
+uploads/
+*.db
+*.sqlite
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Large datasets
+*.csv
+*.json.gz
+*.parquet
+
+# Temporary files
+tmp/
+temp/
+*.tmp

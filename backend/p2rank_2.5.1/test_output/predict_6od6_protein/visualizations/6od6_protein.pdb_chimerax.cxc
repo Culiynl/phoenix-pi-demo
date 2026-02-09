@@ -1,0 +1,35 @@
+open data/6od6_protein.pdb
+surf
+hide solvent
+color protein #bdbdde
+color ligand magenta
+
+
+color name color_pocket1 #5c93e6
+color name color_pocket2 #7d47b3
+color name color_pocket3 #e65cae
+color name color_pocket4 #b36847
+
+name pocket1_atoms @@serial_number=370 @@serial_number=1177 @@serial_number=369 @@serial_number=741 @@serial_number=742 @@serial_number=743 @@serial_number=1175 @@serial_number=1178 @@serial_number=1078 @@serial_number=1080 @@serial_number=363 @@serial_number=1823 @@serial_number=1825 @@serial_number=385 @@serial_number=387 @@serial_number=723 @@serial_number=408 @@serial_number=751 @@serial_number=752 @@serial_number=737 @@serial_number=738 @@serial_number=739 @@serial_number=740 @@serial_number=734 @@serial_number=746 @@serial_number=759 @@serial_number=1062 @@serial_number=1073 @@serial_number=1075 @@serial_number=362 @@serial_number=2131 @@serial_number=348 @@serial_number=349 @@serial_number=2143 @@serial_number=2144 @@serial_number=331 @@serial_number=332 @@serial_number=162 @@serial_number=1152 @@serial_number=1103 @@serial_number=2136 @@serial_number=172 @@serial_number=161 @@serial_number=384
+color pocket1_atoms color_pocket1
+
+name pocket2_atoms @@serial_number=172 @@serial_number=155 @@serial_number=157 @@serial_number=170 @@serial_number=2136 @@serial_number=2145 @@serial_number=2154 @@serial_number=2156 @@serial_number=182 @@serial_number=2160 @@serial_number=2162 @@serial_number=184 @@serial_number=2891 @@serial_number=2893 @@serial_number=3157 @@serial_number=153 @@serial_number=151 @@serial_number=1551 @@serial_number=331 @@serial_number=332 @@serial_number=162 @@serial_number=2143 @@serial_number=2144
+color pocket2_atoms color_pocket2
+
+name pocket3_atoms @@serial_number=3034 @@serial_number=1929 @@serial_number=2650 @@serial_number=2283 @@serial_number=2207 @@serial_number=2208 @@serial_number=2248 @@serial_number=1910 @@serial_number=1909
+color pocket3_atoms color_pocket3
+
+name pocket4_atoms @@serial_number=3519 @@serial_number=2007 @@serial_number=2013 @@serial_number=3514 @@serial_number=1882 @@serial_number=1891 @@serial_number=1892 @@serial_number=1893 @@serial_number=1965 @@serial_number=1966 @@serial_number=2047 @@serial_number=2012 @@serial_number=1993
+color pocket4_atoms color_pocket4
+
+
+
+open data/6od6_protein.pdb_points.pdb.gz
+color by bfactor #2 palette lime:red  range 0,0.7
+
+
+set bgcolor #242455
+transparency 35
+graphics silhouettes true
+lighting full
+view

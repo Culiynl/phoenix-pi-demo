@@ -1,0 +1,153 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap');
+
+:root {
+  --bg-dark: #050505;
+  --bg-card: #0f0f0f;
+  --primary: #3b82f6;
+  --accent-pink: #d946ef; /* From your wireframe pink highlight */
+  --border: #262626;
+  --text-main: #f3f4f6;
+  --text-dim: #71717a;
+  --font-mono: 'Roboto Mono', monospace;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  /* font-family: 'Inter', sans-serif; */
+  margin: 0;
+}
+
+/* Sidebar Styling - The Floating Navbar */
+.sidebar {
+  width: 260px;
+  height: calc(100vh - 40px);
+  position: fixed;
+  left: 20px;
+  top: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.sidebar h3 {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.nav-item:hover { color: white; background: #1a1a1a; }
+.nav-item.active { background: var(--primary); color: white; }
+
+/* Main Container */
+.main-content {
+  margin-left: 300px;
+  padding: 40px;
+}
+
+/* Blocky Card Styling */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.card h2 {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  margin-top: 0;
+  text-transform: uppercase;
+}
+
+/* Technical Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-family: var(--font-mono); /* Gives it that "data" look */
+}
+
+th {
+  text-align: left;
+  padding: 12px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border);
+  background: #141414;
+}
+
+td {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+/* The "Magenta Highlight" from your wireframe */
+.project-row-highlighted {
+  outline: 2px solid var(--accent-pink);
+  background: rgba(217, 70, 239, 0.05);
+}
+
+/* Dashboard Grid Layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.stats-box {
+  background: #1a1a1a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+/* Problem Summary Sub-Blocks */
+.summary-container {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+
+.prop-list {
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--text-dim);
+}
+
+.primary-btn {
+  background: white;
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}

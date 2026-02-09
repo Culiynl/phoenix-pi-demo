@@ -1,0 +1,387 @@
+:root {
+  --bg-dark: #050505;
+  --bg-card: #0f0f0f;
+  --primary: #3b82f6;
+  --border: #353535;
+  --text-main: #f3f4f6;
+  --text-dim: #71717a;
+  
+  /* Use Segoe UI stack */
+  --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar - The Floating Navbar */
+.sidebar {
+  width: 260px;
+  height: calc(100vh - 40px);
+  position: fixed;
+  left: 20px;
+  top: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Tighter gap like Segoe UI apps */
+  box-sizing: border-box;
+}
+
+.sidebar h3 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: #a1a1aa;
+  text-decoration: none;
+  font-weight: 400; /* Segoe UI looks best at 400 */
+  font-size: 0.95rem;
+  transition: background 0.15s ease;
+}
+
+.nav-item:hover { color: white; background: #1a1a1a; }
+.nav-item.active { background: var(--primary); color: white; font-weight: 600; }
+
+.main-content {
+  margin-left: 260px; /* Space for sidebar */
+  display: flex;
+  flex-direction: column;
+  padding: 40px;
+  min-height: 100vh;
+  height: auto; 
+  overflow-y: auto; /* Enable vertical scrolling for the whole page */
+  background: var(--bg-dark);
+}
+
+/* Blocky Card Styling */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+.retro-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 20px;
+}
+
+.route-card {
+  border: 1px solid var(--border);
+  transition: transform 0.2s;
+}
+
+.route-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.route-image-container {
+  background: white; /* AiZynth images usually have white backgrounds */
+  border-radius: 4px;
+  padding: 10px;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.retro-image {
+  max-width: 100%;
+  height: auto;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  padding: 4px 0;
+  border-bottom: 1px solid #222;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.card h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+/* Technical Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  padding: 12px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+  background: #141414;
+}
+
+td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+/* The "Magenta Highlight" row from your wireframe */
+.project-row-highlighted {
+  outline: 2px solid var(--accent-pink);
+  background: rgba(217, 70, 239, 0.03);
+}
+
+/* Blocky Buttons */
+.primary-btn {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: opacity 0.2s;
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+/* Helper for that technical pIC50 distribution look */
+.stats-placeholder {
+  border: 1px solid var(--border);
+  background: #000;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+/* --- Input & Action Group Styles --- */
+.action-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+input[type="text"] {
+  background: #141414;
+  border: 1px solid var(--border);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  flex: 1; /* Makes it take up available space */
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* --- Revised 3-Column Dashboard Grid --- */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Technical Log Style for Feudal Stats */
+.feudal-log {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.75rem;
+  background: #000;
+  padding: 10px;
+  height: 120px;
+  overflow-y: auto;
+  border-radius: 4px;
+  border: 1px solid #222;
+}
+
+/* Hide the logo and help buttons to keep it "Technical/Clean" */
+.msp-logo, .msp-help {
+    display: none !important;
+}
+
+/* Force the Viewer to be dark */
+.msp-plugin-content {
+    background-color: #000 !important;
+}
+
+/* Hide the logo and big "documentation" link */
+.msp-header {
+    display: none !important;
+}
+
+/* Fix z-index so dropdowns don't get stuck behind the canvas */
+.msp-plugin {
+    z-index: 1 !important;
+}
+
+/* Style the viewport controls so they aren't blindingly white */
+.msp-viewport-controls {
+    background: rgba(20, 20, 20, 0.7) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.docking-container-wrapper {
+  width: 100%;
+  max-width: 95%; /* Use almost the entire screen width */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 80px; /* Bottom padding for scroll breathing room */
+}
+
+/* --- Docking Specific Layout --- */
+.docking-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.docking-grid {
+    display: grid;
+    /* Controls are fixed at 400px, Visualizer takes ALL remaining space */
+    grid-template-columns: 400px 1fr; 
+    gap: 30px;
+    height: 1000px; /* High-definition height for Mol* */
+    width: 100%;
+}
+
+.molstar-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #000 !important;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+/* Style for internal Mol* elements to force dark mode */
+.msp-plugin-content, .msp-canvas-container, canvas {
+    background-color: #000 !important;
+}
+
+.pose-table-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-top: 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.pose-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 80px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid #1a1a1a;
+    transition: background 0.2s;
+}
+
+.pose-row:hover { background: #1a1a1a; }
+.pose-row.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-left: 3px solid var(--primary);
+}
+
+.pose-label { color: var(--text-dim); }
+.pose-energy { font-family: monospace; color: #4ade80; text-align: right; }
+
+.technical-table-container {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0a0a0a;
+    width: 100%; /* Ensure tables aren't squeezed */
+}
+
+.technical-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.technical-table th {
+    background: #111;
+    color: #71717a;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    padding: 10px;
+    border-bottom: 1px solid #222;
+    text-align: left;
+}
+
+.technical-table td {
+    padding: 10px;
+    border-bottom: 1px solid #111;
+    font-size: 0.8rem;
+}
+
+.technical-table tr:hover { background: #0a0a0a; }
+
+.loader-small {
+    font-size: 0.7rem;
+    color: var(--primary);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+.docking-grid > .card {
+    margin-bottom: 0; 
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}

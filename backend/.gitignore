@@ -1,0 +1,67 @@
+# Gitignore for deployment
+# Similar to .railwayignore but for git
+
+# Large model files
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+*.joblib
+*.hdf5
+
+# AiZynthFinder models and data
+aizynthfinder/
+models/
+
+# Data directories
+data/
+projects/
+uploads/
+*.db
+*.sqlite
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# Large datasets
+*.csv
+*.json.gz
+*.parquet
+
+# Temporary files
+tmp/
+temp/
+*.tmp

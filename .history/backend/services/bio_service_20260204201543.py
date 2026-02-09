@@ -1,0 +1,326 @@
+import os
+import subprocess
+import json
+import tempfile
+import pandas as pd
+import numpy as np
+import re
+import sys
+from Bio.PDB import PDBList, PDBParser, PDBIO, Select
+
+# --- SAFE IMPORTS ---
+try:
+    import pymol
+    PYMOL_AVAILABLE = True
+except ImportError:
+    PYMOL_AVAILABLE = False
+
+try:
+    from chembl_webresource_client.new_client import new_client
+    CHEMBL_AVAILABLE = True
+except Exception:
+    CHEMBL_AVAILABLE = False
+
+# --- CONFIG & STATE ---
+from config import (
+    BASE_DIR, PDB_DIR, P2RANK_EXEC, IMG_DIR, 
+    AIZYNTH_ENV_PYTHON, AIZYNTH_CLI, AIZYNTH_CONFIG
+)
+from state import log_msg
+
+
+class ProteinManager:
+    @staticmethod
+    def download_and_clean_pdb(pdb_id: str):
+        log_msg(f"   [PDB] Downloading {pdb_id}...")
+        pdbl = PDBList()
+        pdbl.retrieve_pdb_file(pdb_id, pdir=PDB_DIR, file_format='pdb')
+        
+        expected_path = os.path.join(PDB_DIR, f"pdb{pdb_id.lower()}.ent")
+        if not os.path.exists(expected_path):
+             expected_path = os.path.join(PDB_DIR, f"{pdb_id.lower()}.pdb")
+        
+        parser = PDBParser(QUIET=True)
+        structure = parser.get_structure(pdb_id, expected_path)
+        io = PDBIO()
+        io.set_structure(structure)
+        
+        class NotWater(Select):
+            def accept_residue(self, r): return r.get_resname() != "HOH"
+            
+        clean_path = os.path.join(PDB_DIR, f"{pdb_id}_clean.pdb")
+        io.save(clean_path, NotWater())
+        return clean_path
+
+    @staticmethod
+    def find_pocket_p2rank(pdb_path: str, pdb_id: str):
+        # Fallback if P2Rank isn't configured or found
+        if not os.path.exists(P2RANK_EXEC):
+            log_msg("[P2Rank] Executable not found. Using Center of Mass Fallback.")
+            return ProteinManager.find_pocket_center_native(pdb_path)
+
+        out_dir = os.path.join(PDB_DIR, "p2rank_out")
+        os.makedirs(out_dir, exist_ok=True)
+        
+        # Determine shell usage based on OS
+        use_shell = (os.name == 'nt')
+        
+        cmd = [P2RANK_EXEC, "predict", "-f", pdb_path, "-o", out_dir, "-threads", "1", "-visualizations", "0"]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True, shell=use_shell)
+            
+            base_name = os.path.basename(pdb_path)
+            csv_name = f"{base_name}_predictions.csv"
+            csv_path = os.path.join(out_dir, csv_name)
+            
+            if os.path.exists(csv_path):
+                df = pd.read_csv(csv_path)
+                df.columns = df.columns.str.strip()
+                if not df.empty:
+                    row = df.iloc[0]
+                    log_msg(f"   [P2Rank] Pocket found: Score {row['score']}")
+                    return (float(row['center_x']), float(row['center_y']), float(row['center_z']))
+        except Exception as e:
+            log_msg(f"[P2Rank Error] {e}")
+
+        return ProteinManager.find_pocket_center_native(pdb_path)
+
+    @staticmethod
+    def find_pocket_center_native(pdb_path: str):
+        parser = PDBParser(QUIET=True)
+        s = parser.get_structure("x", pdb_path)
+        atoms = [a.get_vector() for a in s.get_atoms()]
+        c = sum(atoms, start=np.array([0,0,0])) / len(atoms)
+        return (c[0], c[1], c[2])
+
+    @staticmethod
+    def generate_pocket_viz(pdb_path: str, center: tuple, pdb_id: str):
+        if not PYMOL_AVAILABLE: return None
+        try:
+            pymol.cmd.reinitialize()
+            pymol.cmd.load(pdb_path, "prot")
+            pymol.cmd.hide("all")
+            pymol.cmd.show("cartoon", "prot")
+            pymol.cmd.color("slate", "prot")
+            pymol.cmd.pseudoatom("p", pos=[center[0], center[1], center[2]])
+            pymol.cmd.show("spheres", "p")
+            pymol.cmd.set("sphere_scale", 3.0, "p")
+            pymol.cmd.color("red", "p")
+            pymol.cmd.zoom("p", buffer=15)
+            fname = f"{pdb_id}_viz.png"
+            # Ray trace slightly for better look
+            pymol.cmd.png(os.path.join(IMG_DIR, fname), width=600, height=400, ray=1)
+            return f"http://localhost:8000/static/{fname}"
+        except: return None
+
+
+import uuid
+class RetroManager:
+    @staticmethod
+    def run_retrosynthesis(smiles: str):
+        print(f"\n[BACKEND] STARTING RETROSYNTHESIS FOR: {smiles}", flush=True)
+
+        # 1. Validation
+        if not os.path.exists(AIZYNTH_ENV_PYTHON):
+            return {"error": f"AiZynth Python not found at {AIZYNTH_ENV_PYTHON}"}
+        
+        abs_config_path = os.path.abspath(AIZYNTH_CONFIG)
+        if not os.path.exists(abs_config_path):
+            return {"error": f"AiZynth Config not found at {abs_config_path}"}
+
+        # 2. Define Paths for this specific run
+        json_fd, json_path = tempfile.mkstemp(suffix=".json")
+        os.close(json_fd)
+
+        run_id = str(uuid.uuid4())[:8]
+        json_path = os.path.join(tempfile.gettempdir(), f"retro_{run_id}.json")
+        from config import DATA_DIR 
+        
+        # 3. CONSTRUCT THE WORKER SCRIPT
+        # We handle reactants defensively (checking for tuples vs objects)
+        worker_code = f"""
+import subprocess
+import json
+import os
+import sys
+
+# Try importing
+try:
+    from aizynthfinder.reactiontree import ReactionTree
+except ImportError:
+    print("CRITICAL: aizynthfinder not installed in this environment.")
+    sys.exit(1)
+
+CONFIG_FILE = r"{abs_config_path}"
+TARGET_SMILES = "{smiles}"
+OUTPUT_JSON = r"{json_path}"
+IMAGE_FOLDER = r"{IMG_DIR}"
+AIZYNTH_CLI = r"{AIZYNTH_CLI}"
+
+print(f"--- 1. Running AiZynthFinder Search ---")
+print(f"Target: {{TARGET_SMILES}}")
+
+command = [
+    AIZYNTH_CLI,
+    "--config", CONFIG_FILE,
+    "--smiles", TARGET_SMILES,
+    "--output", OUTPUT_JSON
+]
+
+try:
+    # Run the CLI tool
+    subprocess.run(command, check=True)
+    print(">>> Search complete.")
+except subprocess.CalledProcessError as e:
+    print(f"Error running CLI: {{e}}")
+    sys.exit(1)
+
+print(f"--- 2. Generating Images ---")
+
+if not os.path.exists(OUTPUT_JSON):
+    print(f"Error: {{OUTPUT_JSON}} was not found.")
+    sys.exit(1)
+
+os.makedirs(IMAGE_FOLDER, exist_ok=True)
+
+with open(OUTPUT_JSON, 'r') as f:
+    data = json.load(f)
+
+# Handle different output formats
+routes = []
+if isinstance(data, dict) and 'routes' in data:
+    routes = data['routes']
+elif isinstance(data, list):
+    routes = data
+
+if not routes:
+    print("No valid routes found.")
+
+processed_routes = []
+
+for i, route_dict in enumerate(routes[:5]):
+    try:
+        print(f"  Processing Route {{i+1}}...")
+        tree = ReactionTree.from_dict(route_dict)
+
+        # --- SAVE IMAGE ---
+        try:
+            img = tree.to_image(in_stock_colors={{True: "#99ff99", False: "#ffcc99"}})
+            base_name = os.path.basename(OUTPUT_JSON)
+            img_filename = f"retro_{run_id}_{{i}}.png"
+            img_path = os.path.join(r"{DATA_DIR}", img_filename) 
+            img.save(img_path)
+            processed_routes.append({{
+                "image": img_filename,
+                "scores": route_dict.get("scores", {{}})
+            }})
+        except Exception as img_err:
+            print(f"    [Warning] Image generation failed: {{img_err}}")
+            fname = ""
+
+        # --- EXTRACT STEPS (Robustly) ---
+        steps = []
+        for reaction in tree.reactions():
+            rxn_reactants = []
+            
+            # The error 'tuple object has no attribute smiles' happened here.
+            # We iterate and check types carefully.
+            for mol in reaction.reactants:
+                # Case 1: Standard Object
+                if hasattr(mol, "smiles"):
+                    rxn_reactants.append(mol.smiles)
+                # Case 2: Tuple (e.g. (Molecule, meta)) - try first item
+                elif isinstance(mol, tuple) and len(mol) > 0:
+                    if hasattr(mol[0], "smiles"):
+                        rxn_reactants.append(mol[0].smiles)
+                    else:
+                        rxn_reactants.append(str(mol[0]))
+                # Case 3: Just a string?
+                elif isinstance(mol, str):
+                    rxn_reactants.append(mol)
+                # Case 4: Fallback
+                else:
+                    rxn_reactants.append(str(mol))
+            
+            steps.append({{
+                "reaction_smarts": getattr(reaction, "smarts", "N/A"),
+                "reactants": " + ".join(rxn_reactants)
+            }})
+
+        processed_routes.append({{
+            "image": fname,
+            "steps": steps,
+            "scores": route_dict.get("scores", {{}})
+        }})
+
+        print(f"    -> Saved route {{i+1}}")
+
+    except Exception as e:
+        print(f"    -> Error processing a route: {{e}}")
+
+# Overwrite output JSON with cleaned structure
+
+    with open(r"{json_path}", "w") as f:
+        json.dump({{"routes": processed_routes}}, f)
+except Exception as e:
+    sys.exit(1)
+
+print("Done.")
+"""
+
+        script_path = os.path.join(tempfile.gettempdir(), f"worker_{run_id}.py")
+        try:
+            with open(script_path, 'w') as f:
+                f.write(worker_code)
+
+            process = subprocess.Popen(
+                [AIZYNTH_ENV_PYTHON, script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=BASE_DIR
+            )
+            
+            # Capture logs for the backend terminal
+            stdout, stderr = process.communicate()
+            if stdout: print(f"[AiZynth STDOUT] {stdout}")
+            if stderr: print(f"[AiZynth STDERR] {stderr}")
+
+            if process.returncode != 0:
+                return {"error": "AiZynth process failed. Check console."}
+
+            # 4. Parse Final Results
+            if os.path.exists(json_path):
+                with open(json_path, 'r') as f:
+                    results = json.load(f)
+                
+                for route in results.get("routes", []):
+                    route["image_url"] = f"http://localhost:8000/static/{route['image']}"
+                
+                return results
+            return {"error": "No results generated"}
+
+        finally:
+            if os.path.exists(script_path): os.remove(script_path)
+            if os.path.exists(json_path): os.remove(json_path)
+
+
+def fetch_chembl_data(target_name: str):
+    if not CHEMBL_AVAILABLE: return None
+    search_term = target_name
+    t = new_client.target.filter(target_synonym__icontains=search_term).filter(target_type='SINGLE PROTEIN')
+    
+    if not t and "(" in search_term:
+        match = re.search(r'\((.*?)\)', search_term)
+        if match:
+            t = new_client.target.filter(target_synonym__icontains=match.group(1)).filter(target_type='SINGLE PROTEIN')
+            
+    if not t: return None
+    
+    acts = new_client.activity.filter(target_chembl_id=t[0]['target_chembl_id'], standard_type="IC50", standard_value__isnull=False)
+    data = []
+    for a in acts:
+        if len(data) > 200: break
+        if a.get('canonical_smiles'):
+            data.append({"smiles": a['canonical_smiles'], "standard_value": float(a['standard_value'])})
+    return {"compounds": data}

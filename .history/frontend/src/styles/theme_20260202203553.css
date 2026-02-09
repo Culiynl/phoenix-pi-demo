@@ -1,0 +1,285 @@
+:root {
+  --bg-dark: #050505;
+  --bg-card: #0f0f0f;
+  --primary: #3b82f6;
+  --border: #353535;
+  --text-main: #f3f4f6;
+  --text-dim: #71717a;
+  
+  /* Use Segoe UI stack */
+  --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar - The Floating Navbar */
+.sidebar {
+  width: 260px;
+  height: calc(100vh - 40px);
+  position: fixed;
+  left: 20px;
+  top: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Tighter gap like Segoe UI apps */
+  box-sizing: border-box;
+}
+
+.sidebar h3 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: #a1a1aa;
+  text-decoration: none;
+  font-weight: 400; /* Segoe UI looks best at 400 */
+  font-size: 0.95rem;
+  transition: background 0.15s ease;
+}
+
+.nav-item:hover { color: white; background: #1a1a1a; }
+.nav-item.active { background: var(--primary); color: white; font-weight: 600; }
+
+/* Main Area */
+.main-content {
+  margin-left: 300px;
+  padding: 40px;
+}
+
+/* Blocky Card Styling */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.card h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+/* Technical Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  padding: 12px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+  background: #141414;
+}
+
+td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+/* The "Magenta Highlight" row from your wireframe */
+.project-row-highlighted {
+  outline: 2px solid var(--accent-pink);
+  background: rgba(217, 70, 239, 0.03);
+}
+
+/* Blocky Buttons */
+.primary-btn {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: opacity 0.2s;
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+/* Helper for that technical pIC50 distribution look */
+.stats-placeholder {
+  border: 1px solid var(--border);
+  background: #000;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+/* --- Input & Action Group Styles --- */
+.action-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+input[type="text"] {
+  background: #141414;
+  border: 1px solid var(--border);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  flex: 1; /* Makes it take up available space */
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* --- Revised 3-Column Dashboard Grid --- */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Technical Log Style for Feudal Stats */
+.feudal-log {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.75rem;
+  background: #000;
+  padding: 10px;
+  height: 120px;
+  overflow-y: auto;
+  border-radius: 4px;
+  border: 1px solid #222;
+}
+
+/* Hide the logo and help buttons to keep it "Technical/Clean" */
+.msp-logo, .msp-help {
+    display: none !important;
+}
+
+/* Force the Viewer to be dark */
+.msp-plugin-content {
+    background-color: #000 !important;
+}
+
+/* Hide the logo and big "documentation" link */
+.msp-header {
+    display: none !important;
+}
+
+/* Fix z-index so dropdowns don't get stuck behind the canvas */
+.msp-plugin {
+    z-index: 1 !important;
+}
+
+/* Style the viewport controls so they aren't blindingly white */
+.msp-viewport-controls {
+    background: rgba(20, 20, 20, 0.7) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.docking-container-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  
+  /* SHIFT LEFT NUDGE */
+  transform: translateX(-240px); 
+}
+
+/* --- Docking Specific Layout --- */
+.docking-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.msp-traj-controls {
+    /* bottom right corner */
+    position: absolute !important;
+    bottom: 20px;
+}
+
+.docking-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 12px;
+    height: 700px; /* Fixed height for the docking workspace */
+}
+
+/* Fix for Mol* Background */
+.molstar-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #000 !important;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+/* Style for internal Mol* elements to force dark mode */
+.msp-plugin-content, .msp-canvas-container, canvas {
+    background-color: #000 !important;
+}
+
+/* Pose Table Styles */
+.pose-table-container {
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #0a0a0a;
+}
+
+.pose-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 80px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid #1a1a1a;
+    transition: background 0.2s;
+}
+
+.pose-row:hover { background: #1a1a1a; }
+.pose-row.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-left: 3px solid var(--primary);
+}
+
+.pose-label { color: var(--text-dim); }
+.pose-energy { font-family: monospace; color: #4ade80; text-align: right; }

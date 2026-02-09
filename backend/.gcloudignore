@@ -1,0 +1,31 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+node_modules/
+# Ignore large data directories to keep image small
+data/
+checkpoints/
+p2rank_2.5.1/
+# Ignore local secrets if they exist (except serviceAccountKey if needed, but safer to use secrets manager)
+# excluding serviceAccountKey.json is safer, but user code might rely on it. 
+# If user code loads it from file, it must be included or mounted as secret.
+# For now, include it if it's small, but usually we ignore it and use ENV vars.
+# serviceAccountKey.json 
+# Ignore logs
+logs/
+
+# Large files in root
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+

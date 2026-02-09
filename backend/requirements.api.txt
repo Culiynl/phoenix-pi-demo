@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+requests
+firebase-admin
+rdkit-pypi
+numpy
+google-generativeai
+biopython
+chembl_webresource_client
+arxiv
+# CPU versions where possible (Cloud Run doesn't support GPU natively for these instances usually)
+torch --index-url https://download.pytorch.org/whl/cpu

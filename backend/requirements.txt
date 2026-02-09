@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+biopython
+chembl_webresource_client
+google-generativeai
+requests
+firebase-admin
+rdkit-pypi
+torch
+numpy
