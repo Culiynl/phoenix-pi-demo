@@ -19,3 +19,4 @@ selfies
 meeko
 scipy
 gemmi
+pandas
