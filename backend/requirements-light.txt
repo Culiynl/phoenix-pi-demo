@@ -14,3 +14,5 @@ rdkit==2023.9.1
 
 --find-links https://download.pytorch.org/whl/cpu/torch_stable.html
 torch==2.0.1+cpu
+
+selfies
