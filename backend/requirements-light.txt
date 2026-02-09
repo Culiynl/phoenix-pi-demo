@@ -20,3 +20,5 @@ meeko
 scipy
 gemmi
 pandas
+biopython
+requests
