@@ -134,7 +134,7 @@ const Projects = () => {
               onKeyPress={e => e.key === 'Enter' && handleArXivSearch()}
             />
             <button onClick={handleArXivSearch} disabled={isSearching}>
-              {isSearching ? '...' : '🔍'}
+              {isSearching ? '...' : 'Search'}
             </button>
           </div>
           <div className="arxiv-results">

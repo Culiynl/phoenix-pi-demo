@@ -7,30 +7,28 @@ _db = None
 
 def init_firebase():
     global _db
-    
-    # Check if Firebase is already initialized to prevent "App already exists" errors
     if not firebase_admin._apps:
-        # 1. Priority: Check if GOOGLE_APPLICATION_CREDENTIALS is set (Render/Production)
-        # firebase_admin.initialize_app() automatically finds this variable.
-        if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            print(f"Initializing Firebase with Env Var: {os.getenv('GOOGLE_APPLICATION_CREDENTIALS')}")
-            firebase_admin.initialize_app()
-            
-        # 2. Fallback: Check for local serviceAccountKey.json (Local Development)
-        else:
-            local_key_path = os.path.join(os.path.dirname(__file__), "..", "serviceAccountKey.json")
-            if os.path.exists(local_key_path):
-                print("Environment variable not set. Falling back to local serviceAccountKey.json...")
-                cred = credentials.Certificate(local_key_path)
-                firebase_admin.initialize_app(cred)
-            else:
-                # 3. Final Fallback: GCloud Default Credentials (if running on Google Cloud directly)
-                print("No key found. Attempting Default Credentials...")
-                firebase_admin.initialize_app()
-
-    if _db is None:
-        _db = firestore.client()
+        # 1. Path for Render (Production)
+        render_secret_path = "/etc/secrets/service_account_key.json"
         
+        # 2. Path for your Local Machine (Fixed)
+        # We go up ONE level (..) from the 'services' folder to hit the 'backend' folder
+        local_key_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "serviceAccountKey.json"))
+
+        if os.path.exists(render_secret_path):
+            print(f"Using Render Secret Key: {render_secret_path}")
+            cred = credentials.Certificate(render_secret_path)
+            firebase_admin.initialize_app(cred)
+        elif os.path.exists(local_key_path):
+            print(f"Using Local Key: {local_key_path}")
+            cred = credentials.Certificate(local_key_path)
+            firebase_admin.initialize_app(cred)
+        else:
+            # This helps you debug exactly where the code is looking
+            print(f"DEBUG: Looked for local key at: {local_key_path}")
+            raise Exception("CRITICAL: No serviceAccountKey.json found! Firestore will not work.")
+            
+    _db = firestore.client()
     return _db
 
 def get_db():
