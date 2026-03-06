@@ -26,7 +26,7 @@ class MultimodalAnalyzer:
         Returns:
             dict: Gemini's analysis and recommendations
         """
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         try:
             # Format P2Rank results for Gemini
@@ -67,8 +67,8 @@ Provide actionable recommendations."""
             
             analysis_text = response.text
             
-            # Save to Firestore
-            from services.firebase_service import update_mission_field
+            # Save to Local Storage
+            from services.local_storage_service import update_mission_field
             from datetime import datetime
             
             update_mission_field(mission_id, "p2rank_analysis", {
@@ -100,7 +100,7 @@ Provide actionable recommendations."""
         Returns:
             dict: Analysis results with binding sites, residues, and coordinates
         """
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         try:
             with open(image_path, 'rb') as f:
@@ -122,8 +122,9 @@ Provide your analysis in a structured format with clear sections."""
             
             analysis_text = response.text
             
-            # Save to Firestore
-            from services.firebase_service import update_mission_field
+            # Save to Local Storage
+            from services.local_storage_service import update_mission_field
+            from datetime import datetime
             update_mission_field(mission_id, "structure_analysis", {
                 "image_path": image_path,
                 "analysis": analysis_text,
@@ -154,7 +155,7 @@ Provide your analysis in a structured format with clear sections."""
         Returns:
             dict: Extracted insights including molecules, targets, and findings
         """
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         try:
             # Upload PDF to Gemini
@@ -175,8 +176,8 @@ Format the output as structured sections with bullet points."""
             
             analysis_text = response.text
             
-            # Save to Firestore
-            from services.firebase_service import update_mission_field
+            # Save to Local Storage
+            from services.local_storage_service import update_mission_field
             from datetime import datetime
             
             update_mission_field(mission_id, "pdf_analysis", {
@@ -208,7 +209,7 @@ Format the output as structured sections with bullet points."""
         Returns:
             dict: SMILES string and confidence
         """
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         try:
             with open(sketch_image_path, 'rb') as f:

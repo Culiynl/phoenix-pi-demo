@@ -5,14 +5,14 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 const FeudalOptimization = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
-    const logEndRef = useRef(null); 
-    
+    const logEndRef = useRef(null);
+
     // State
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState([]); 
+    const [history, setHistory] = useState([]);
     const [winner, setWinner] = useState(null);
-    const [logs, setLogs] = useState([]); 
+    const [logs, setLogs] = useState([]);
     // ADDED similarity to weights
     const [weights, setWeights] = useState({ affinity: 1.0, qed: 1.0, sa: 1.0, similarity: 1.0 });
 
@@ -31,7 +31,7 @@ const FeudalOptimization = () => {
         addLog("Initializing Feudal RL Engine...", "info");
 
         try {
-            await fetch('http://localhost:8000/api/feudal/optimize', {
+            await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/feudal/optimize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ project_id: projectId, smiles: smiles })
@@ -48,23 +48,23 @@ const FeudalOptimization = () => {
         const interval = setInterval(async () => {
             try {
                 // 1. Fetch live logs and history
-                const statusRes = await fetch(`http://localhost:8000/api/feudal/status/${projectId}`);
+                const statusRes = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/feudal/status/${projectId}`);
                 const statusData = await statusRes.json();
-                
+
                 if (statusData.logs) setLogs(statusData.logs);
                 if (statusData.history) setHistory(statusData.history);
 
                 // 2. Fetch Pareto Winner (for the card)
-                const winnerRes = await fetch(`http://localhost:8000/api/feudal/pareto-rank`, {
+                const winnerRes = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/feudal/pareto-rank`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ project_id: projectId, weights: weights })
                 });
-                
+
                 if (winnerRes.ok) {
                     const winnerData = await winnerRes.json();
                     setWinner(winnerData);
-                    
+
                     // Stop polling if the backend log says complete
                     const lastLog = statusData.logs[statusData.logs.length - 1];
                     if (lastLog?.msg.includes("complete")) {
@@ -79,7 +79,7 @@ const FeudalOptimization = () => {
     return (
         <div className="main-content">
             <div className="docking-container-wrapper" style={{ transform: 'translateX(-60px)' }}>
-                
+
                 <div className="docking-header">
                     <button className="primary-btn" onClick={() => navigate(`/dashboard/${projectId}`)}>← Back</button>
                     <h2 style={{ margin: 0 }}>Feudal RL Optimization: {projectId}</h2>
@@ -102,19 +102,19 @@ const FeudalOptimization = () => {
                                             <span style={{ textTransform: 'uppercase', color: '#ccc' }}>{key}</span>
                                             <span style={{ color: 'var(--primary)' }}>{weights[key]}</span>
                                         </div>
-                                        <input 
-                                            type="range" min="0" max="2" step="0.1" 
+                                        <input
+                                            type="range" min="0" max="2" step="0.1"
                                             style={{ width: '100%', accentColor: 'var(--primary)' }}
-                                            value={weights[key]} 
-                                            onChange={(e) => setWeights({...weights, [key]: parseFloat(e.target.value)})}
+                                            value={weights[key]}
+                                            onChange={(e) => setWeights({ ...weights, [key]: parseFloat(e.target.value) })}
                                         />
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <button className="primary-btn" style={{ background: 'var(--primary)', color: 'white', border: 'none' }} 
-                                onClick={runOptimization} disabled={loading}>
+                        <button className="primary-btn" style={{ background: 'var(--primary)', color: 'white', border: 'none' }}
+                            onClick={runOptimization} disabled={loading}>
                             {loading ? "Optimizing..." : "Start Feudal Loop"}
                         </button>
 
@@ -137,7 +137,7 @@ const FeudalOptimization = () => {
                         <div className="card" style={{ margin: 0, height: '300px' }}>
                             <h3 style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '15px' }}>BINDING AFFINITY TRAJECTORY</h3>
                             <ResponsiveContainer width="100%" height="90%">
-                                <LineChart data={history?.length > 0 ? history : [{step:0, score:0}]}>
+                                <LineChart data={history?.length > 0 ? history : [{ step: 0, score: 0 }]}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#222" />
                                     <XAxis dataKey="step" stroke="#71717a" />
                                     <YAxis reversed stroke="#71717a" domain={['auto', 'auto']} />
@@ -152,30 +152,30 @@ const FeudalOptimization = () => {
                             {winner ? (
                                 <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
                                     <div style={{ width: '250px', height: '250px', background: '#fff', borderRadius: '8px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <img 
-                                            src={`http://localhost:8000/api/render?smiles=${encodeURIComponent(winner.smiles)}`} 
-                                            alt="Winner Molecule" 
-                                            style={{ maxWidth: '100%', maxHeight: '100%' }} 
+                                        <img
+                                            src={`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/render?smiles=${encodeURIComponent(winner.smiles)}`}
+                                            alt="Winner Molecule"
+                                            style={{ maxWidth: '100%', maxHeight: '100%' }}
                                         />
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontSize: '2rem', fontWeight: 'bold', color: winner.score < 0 ? '#4ade80' : '#f87171' }}>
                                             {winner.score} kcal/mol
-                                            {winner.score === 0 && <span style={{fontSize: '0.8rem', display: 'block', color: '#f87171'}}>⚠️ Vina Execution Failed</span>}
+                                            {winner.score === 0 && <span style={{ fontSize: '0.8rem', display: 'block', color: '#f87171' }}>⚠️ Vina Execution Failed</span>}
                                         </div>
-                                        
+
                                         <div className="feudal-log" style={{ height: 'auto', width: '350px', background: 'transparent', border: 'none', padding: 0, marginTop: '15px' }}>
-                                            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1rem'}}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1rem' }}>
                                                 <span>QED Score:</span> <strong>{winner.qed}</strong>
                                             </div>
-                                            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1rem'}}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1rem' }}>
                                                 <span>SA Score:</span> <strong>{winner.sa}</strong>
                                             </div>
-                                            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1rem'}}>
-                                                <span>Similarity:</span> <strong style={{color: 'var(--primary)'}}>{(winner.similarity * 100).toFixed(1)}%</strong>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '1rem' }}>
+                                                <span>Similarity:</span> <strong style={{ color: 'var(--primary)' }}>{(winner.similarity * 100).toFixed(1)}%</strong>
                                             </div>
-                                            <div style={{borderTop: '1px solid #333', marginTop: '10px', paddingTop: '10px', fontSize: '0.8rem', color: '#666'}}>
-                                                SMILES: <span style={{wordBreak: 'break-all'}}>{winner.smiles}</span>
+                                            <div style={{ borderTop: '1px solid #333', marginTop: '10px', paddingTop: '10px', fontSize: '0.8rem', color: '#666' }}>
+                                                SMILES: <span style={{ wordBreak: 'break-all' }}>{winner.smiles}</span>
                                             </div>
                                         </div>
                                     </div>

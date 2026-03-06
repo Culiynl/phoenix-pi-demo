@@ -11,17 +11,17 @@ const Docking = () => {
     const navigate = useNavigate();
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    
+
     // --- State: Search & Import ---
     const [pdbSearch, setPdbSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(false);
-    
+
     // --- State: P2Rank & Pockets ---
     const [pockets, setPockets] = useState([]);
     const [dockingCenter, setDockingCenter] = useState(null); // Calculated from P2Rank
-    
+
     // --- State: Vina Docking ---
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [poses, setPoses] = useState([]);
@@ -47,7 +47,7 @@ const Docking = () => {
                 const ctx = await createPluginUI({
                     target: parentRef.current,
                     spec: spec,
-                    render: renderReact18 
+                    render: renderReact18
                 });
                 pluginRef.current = ctx;
                 setIsPluginReady(true);
@@ -64,7 +64,7 @@ const Docking = () => {
         if (!pdbSearch) return;
         setIsSearching(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
+            const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
             const data = await res.json();
             setSearchResults(data || []);
         } catch (e) { alert("Search failed."); }
@@ -80,7 +80,7 @@ const Docking = () => {
         setLoading(true);
         const cleanId = pdbId.toUpperCase();
         try {
-            const res = await fetch(`http://localhost:8000/api/pdb/fetch/${cleanId}`);
+            const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/pdb/fetch/${cleanId}`);
             if (res.status === 404) throw new Error("File not found on RCSB");
             const data = await res.json();
             alert(`Structure ${cleanId} added to local storage.`);
@@ -104,7 +104,7 @@ const Docking = () => {
     const loadPdbIntoViewer = async (relativeUrl) => {
         if (!pluginRef.current) return;
         await pluginRef.current.clear();
-        const data = await pluginRef.current.builders.data.download({ url: `http://localhost:8000${relativeUrl}` });
+        const data = await pluginRef.current.builders.data.download({ url: `http://https://g5gd0v28-8000.usw3.devtunnels.ms${relativeUrl}` });
         const trajectory = await pluginRef.current.builders.structure.parseTrajectory(data, 'pdb');
         await pluginRef.current.builders.structure.hierarchy.applyPreset(trajectory, 'default');
     };
@@ -117,15 +117,15 @@ const Docking = () => {
 
         try {
             // 1. Start the process
-            await fetch(`http://localhost:8000/api/p2rank/run?pdb_filename=${filename}&project_id=${projectId}`, { 
-                method: 'POST' 
+            await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/p2rank/run?pdb_filename=${filename}&project_id=${projectId}`, {
+                method: 'POST'
             });
 
             // 2. Poll every 3 seconds
             const pollInterval = setInterval(async () => {
                 try {
-                    const res = await fetch(`http://localhost:8000/api/p2rank/results?pdb_filename=${filename}&project_id=${projectId}`);
-                    
+                    const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/p2rank/results?pdb_filename=${filename}&project_id=${projectId}`);
+
                     if (res.status === 200) {
                         const data = await res.json();
                         if (data && data.length > 0) {
@@ -133,7 +133,7 @@ const Docking = () => {
                             // Auto-set the center to Pocket #1
                             const top = data[0];
                             setDockingCenter({ x: top.center_x, y: top.center_y, z: top.center_z });
-                            
+
                             clearInterval(pollInterval);
                             setLoading(false);
                             alert("Pocket detection complete!");
@@ -182,13 +182,13 @@ const Docking = () => {
     const handleRunDocking = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8000/api/docking/run', {
+            const response = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    project_id: String(projectId), 
+                body: JSON.stringify({
+                    project_id: String(projectId),
                     smiles: smiles.trim(),
-                    center_override: dockingCenter 
+                    center_override: dockingCenter
                 })
             });
             const data = await response.json();
@@ -205,8 +205,8 @@ const Docking = () => {
     const loadComplex = async (recUrl, ligUrl, idx) => {
         const plugin = pluginRef.current;
         await plugin.clear();
-        const baseUrl = 'http://localhost:8000';
-        
+        const baseUrl = 'http://https://g5gd0v28-8000.usw3.devtunnels.ms';
+
         const recData = await plugin.builders.data.download({ url: `${baseUrl}${recUrl}` });
         const recStruct = await plugin.builders.structure.createStructure(await plugin.builders.structure.createModel(await plugin.builders.structure.parseTrajectory(recData, 'pdb')));
         await plugin.builders.structure.representation.addRepresentation(recStruct, { type: 'cartoon', color: 'uniform', colorParams: { value: 0x3b82f6 } });
@@ -214,14 +214,14 @@ const Docking = () => {
         const ligData = await plugin.builders.data.download({ url: `${baseUrl}${ligUrl}` });
         const ligStruct = await plugin.builders.structure.createStructure(await plugin.builders.structure.createModel(await plugin.builders.structure.parseTrajectory(ligData, 'pdb'), { modelIndex: idx }));
         await plugin.builders.structure.representation.addRepresentation(ligStruct, { type: 'ball-and-stick', color: 'element-symbol' });
-        
+
         plugin.managers.camera.reset();
     };
 
     return (
         <div className="main-content">
             <div className="docking-container-wrapper" style={{ transform: 'translateX(-60px)' }}>
-                
+
                 <div className="docking-header">
                     <button className="primary-btn" onClick={() => navigate(`/dashboard/${projectId}`)}>← Back</button>
                     <h2 style={{ margin: 0 }}>Molecular Docking & Prep</h2>
@@ -229,17 +229,17 @@ const Docking = () => {
                 </div>
 
                 <div className="docking-grid">
-                    
+
                     {/* RCSB SEARCH PANEL */}
                     <div className="card" style={{ gridColumn: 'span 2' }}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                             <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', margin: 0 }}>RCSB PDB REPOSITORY</h3>
                             {isSearching && <span className="loader-small">Searching API...</span>}
                         </div>
                         <div className="action-group">
-                            <input type="text" placeholder="Enter keyword or ID (e.g. 6OD6)" className="technical-input" 
+                            <input type="text" placeholder="Enter keyword or ID (e.g. 6OD6)" className="technical-input"
                                 value={pdbSearch} onChange={(e) => setPdbSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handlePdbSearch()} />
-                            <button className="primary-btn" style={{background: 'var(--primary)', color: 'white'}} onClick={handlePdbSearch}>Search Database</button>
+                            <button className="primary-btn" style={{ background: 'var(--primary)', color: 'white' }} onClick={handlePdbSearch}>Search Database</button>
                         </div>
 
                         {searchResults.length > 0 && (
@@ -249,13 +249,13 @@ const Docking = () => {
                                     <tbody>
                                         {searchResults.map(r => (
                                             <tr key={r.id}>
-                                                <td style={{fontWeight: 'bold', color: 'var(--primary)'}}>{r.id}</td>
-                                                <td style={{fontSize: '0.75rem'}}>{r.title}</td>
+                                                <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{r.id}</td>
+                                                <td style={{ fontSize: '0.75rem' }}>{r.title}</td>
                                                 <td>{r.organism}</td>
                                                 <td>
-                                                    <div style={{display: 'flex', gap: '5px'}}>
+                                                    <div style={{ display: 'flex', gap: '5px' }}>
                                                         <button className="primary-btn" onClick={() => handlePreview(r.id)}>Preview</button>
-                                                        <button className="primary-btn" style={{background: '#4ade80', color: '#000'}} onClick={() => handleImport(r.id)}>Import</button>
+                                                        <button className="primary-btn" style={{ background: '#4ade80', color: '#000' }} onClick={() => handleImport(r.id)}>Import</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -268,7 +268,7 @@ const Docking = () => {
 
                     {/* P2RANK POCKET PANEL */}
                     <div className="card" style={{ gridColumn: 'span 2' }}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>P2RANK POCKET DETECTION</h3>
                             <button className="primary-btn" onClick={handleRunP2Rank} disabled={!pdbSearch || loading}>
                                 {loading ? "Processing..." : "Run P2Rank Analysis"}
@@ -281,11 +281,11 @@ const Docking = () => {
                                     <thead><tr><th>Rank</th><th>Score</th><th>Prob.</th><th>Center (X,Y,Z)</th><th>Action</th></tr></thead>
                                     <tbody>
                                         {pockets.map(p => (
-                                            <tr key={p.rank} style={{background: p.rank === 1 ? 'rgba(59, 130, 246, 0.1)' : 'transparent'}}>
+                                            <tr key={p.rank} style={{ background: p.rank === 1 ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>
                                                 <td>#{p.rank} {p.rank === 1 && "(Target)"}</td>
                                                 <td>{p.score}</td>
                                                 <td>{p.probability}</td>
-                                                <td style={{fontSize: '0.65rem', fontFamily: 'monospace'}}>{p.center_x}, {p.center_y}, {p.center_z}</td>
+                                                <td style={{ fontSize: '0.65rem', fontFamily: 'monospace' }}>{p.center_x}, {p.center_y}, {p.center_z}</td>
                                                 <td><button className="primary-btn" onClick={() => highlightPocket(p.residue_ids)}>Focus</button></td>
                                             </tr>
                                         ))}
@@ -298,8 +298,8 @@ const Docking = () => {
                     {/* VINA DOCKING PANEL */}
                     <div className="card" style={{ margin: 0, padding: '24px', display: 'flex', flexDirection: 'column' }}>
                         <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '15px' }}>DOCKING CONTROLS</h3>
-                        {dockingCenter && <div style={{fontSize: '0.65rem', color: '#4ade80', marginBottom: '10px'}}>✓ Using Pocket #{pockets[0]?.rank} as Center</div>}
-                        
+                        {dockingCenter && <div style={{ fontSize: '0.65rem', color: '#4ade80', marginBottom: '10px' }}>✓ Using Pocket #{pockets[0]?.rank} as Center</div>}
+
                         <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>LIGAND (SMILES)</label>
                         <textarea className="technical-input" style={{ background: '#000', border: '1px solid var(--border)', color: 'white', padding: '12px', borderRadius: '6px', height: '80px', marginBottom: '20px', resize: 'none' }}
                             value={smiles} onChange={(e) => setSmiles(e.target.value)} />

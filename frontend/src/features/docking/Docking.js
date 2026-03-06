@@ -87,6 +87,7 @@ const Docking = () => {
         if (!pdbSearch) return;
         // setIsSearching(true); // Unused
         try {
+            // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const res = await fetch(`${baseUrl}/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
             const data = await res.json();
@@ -104,6 +105,7 @@ const Docking = () => {
     const handleImport = async (pdbId) => {
         setLoading(true);
         try {
+            // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const res = await fetch(`${baseUrl}/api/pdb/fetch/${pdbId.toUpperCase()}`);
             if (!res.ok) throw new Error("Structure not found on RCSB");
@@ -140,6 +142,7 @@ const Docking = () => {
         const format = getFormat(relativeUrl);
         try {
             await plugin.clear();
+            // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const data = await plugin.builders.data.download({ url: `${baseUrl}${relativeUrl}` });
             const trajectory = await plugin.builders.structure.parseTrajectory(data, format);
@@ -161,6 +164,7 @@ const Docking = () => {
 
         try {
             // Ensure projectId is passed here
+            // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             await fetch(`${baseUrl}/api/p2rank/run?pdb_filename=${pdbSearch}&project_id=${projectId}`, {
                 method: 'POST'
@@ -169,6 +173,7 @@ const Docking = () => {
             const pollInterval = setInterval(async () => {
                 try {
                     // Fix: template literal was likely missing the variable or it was null
+                    // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
                     const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
                     const logRes = await fetch(`${baseUrl}/api/p2rank/status/${projectId}`);
                     const logs = await logRes.json();
@@ -224,6 +229,7 @@ const Docking = () => {
     const handleRunDocking = async () => {
         setLoading(true);
         try {
+            // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const response = await fetch(`${baseUrl}/api/docking/run`, {
                 method: 'POST',
@@ -248,6 +254,7 @@ const Docking = () => {
     const loadComplex = async (recUrl, ligUrl, idx) => {
         const plugin = pluginRef.current;
         await plugin.clear();
+        // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
         const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
         const recData = await plugin.builders.data.download({ url: `${baseUrl}${recUrl}` });

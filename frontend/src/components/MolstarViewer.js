@@ -1,175 +1,158 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
+import { createPluginUI } from 'molstar/lib/mol-plugin-ui';
 import { renderReact18 } from 'molstar/lib/mol-plugin-ui/react18';
 import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
 import 'molstar/lib/mol-plugin-ui/skin/light.scss';
+import { Color } from 'molstar/lib/mol-util/color';
 
-const MolstarViewer = ({ pdbId, ligandUrl, receptorUrl }) => {
+const MolstarViewer = ({ pdbId, ligandUrl, receptorUrl, customPdbData, visualState }) => {
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    const [initError, setInitError] = useState(null);
+    const [initialized, setInitialized] = useState(false);
 
-    // 1️⃣ Initialize Molstar ONCE (no dependencies on props)
-    useEffect(() => {
-        let mounted = true;
+    useLayoutEffect(() => {
+        let isCurrent = true;
+        const currentParent = parentRef.current;
+        async function init() {
+            if (!currentParent) return;
+            currentParent.innerHTML = '';
 
-        const spec = {
-            ...DefaultPluginUISpec(),
-            layout: {
-                initial: {
-                    isExpanded: false,
-                    showControls: false,
-                    regionState: {
-                        left: 'hidden',
-                        top: 'hidden',
-                        right: 'hidden',
-                        bottom: 'hidden'
+            const spec = {
+                ...DefaultPluginUISpec(),
+                layout: {
+                    initial: {
+                        isExpanded: false,
+                        showControls: false,
+                        regionState: { left: 'hidden', top: 'hidden', right: 'hidden', bottom: 'hidden' }
                     }
-                }
-            }
-        };
-
-        const init = async () => {
-            // Wait for React to mount the DOM element
-            await new Promise(resolve => setTimeout(resolve, 0));
-
-            if (!mounted || !parentRef.current || pluginRef.current) return;
+                },
+                components: { remoteState: 'none' }
+            };
 
             try {
-                const plugin = await renderReact18(parentRef.current, spec);
-                if (mounted) {
-                    pluginRef.current = plugin;
-                }
-            } catch (err) {
-                console.error("Molstar init failed:", err);
-                if (mounted) {
-                    setInitError(err.message);
-                }
-            }
-        };
+                const ctx = await createPluginUI({
+                    target: currentParent,
+                    spec: spec,
+                    render: renderReact18
+                });
 
+                if (!isCurrent) {
+                    ctx.dispose();
+                    return;
+                }
+
+                // Set Background to White as requested
+                ctx.canvas3d?.setProps({
+                    renderer: { ...ctx.canvas3d.props.renderer, backgroundColor: Color(0xFFFFFF) }
+                });
+
+                pluginRef.current = ctx;
+                setInitialized(true);
+            } catch (error) {
+                if (!error.message?.includes('already added')) console.error(error);
+            }
+        }
         init();
-
         return () => {
-            mounted = false;
-            if (pluginRef.current) {
-                try {
-                    pluginRef.current.dispose();
-                } catch (e) {
-                    console.warn("Molstar disposal error:", e);
-                }
-                pluginRef.current = null;
-            }
+            isCurrent = false;
+            if (pluginRef.current) pluginRef.current.dispose();
+            if (currentParent) currentParent.innerHTML = '';
         };
-    }, []); // ✅ Empty deps - init once only
+    }, []);
 
-    // 2️⃣ Load structures separately when props change
     useEffect(() => {
-        if (!pluginRef.current) return;
+        if (!initialized || !pluginRef.current) return;
 
-        const loadStructures = async () => {
+        const load = async () => {
             const plugin = pluginRef.current;
+            await plugin.clear();
 
             try {
-                // Clear previous structures
-                plugin.clear();
-
-                if (pdbId) {
-                    const url = `http://localhost:8000/static/pdb_files/${pdbId}_clean.pdb`;
-                    await plugin.builders.structure.download({ url }, 'pdb');
-                } else if (receptorUrl && ligandUrl) {
-                    const receptor = await plugin.builders.structure.download({
-                        url: `http://localhost:8000${receptorUrl}`
-                    }, 'pdb');
-                    const ligand = await plugin.builders.structure.download({
-                        url: `http://localhost:8000${ligandUrl}`
-                    }, 'pdb');
-
-                    if (receptor && ligand) {
-                        await plugin.builders.structure.representation.addRepresentation(
-                            receptor.root,
-                            { type: 'cartoon', color: 'chain-id' }
-                        );
-                        await plugin.builders.structure.representation.addRepresentation(
-                            ligand.root,
-                            { type: 'ball-and-stick', color: 'element-symbol' }
-                        );
-                    }
+                // ... (existing loading logic) ...
+                let data;
+                // 1. Raw PDB
+                if (customPdbData && !pdbId) {
+                    data = await plugin.builders.data.rawData({ data: customPdbData });
                 }
-            } catch (err) {
-                console.error("Structure loading failed:", err);
+                // 2. RCSB PDB
+                else if (pdbId) {
+                    const url = `https://files.rcsb.org/download/${pdbId.toUpperCase()}.pdb`;
+                    data = await plugin.builders.data.download({ url, isBinary: false });
+                }
+                // 3. Docking Results (Receptor + Ligand)
+                else if (receptorUrl && ligandUrl) {
+                    // const baseUrl = 'http://localhost:8000';
+                    const baseUrl = 'http://localhost:8000';
+                    // Load Receptor
+                    const r = await plugin.builders.data.download({ url: `${baseUrl}${receptorUrl}`, label: 'Receptor' });
+                    const rTraj = await plugin.builders.structure.parseTrajectory(r, 'pdb');
+                    await plugin.builders.structure.hierarchy.applyPreset(rTraj, 'default');
+
+                    // Load Ligand
+                    const l = await plugin.builders.data.download({ url: `${baseUrl}${ligandUrl}`, label: 'Ligand (Best Pose)' });
+                    const lTraj = await plugin.builders.structure.parseTrajectory(l, 'pdb');
+                    const lComp = await plugin.builders.structure.hierarchy.applyPreset(lTraj, 'default');
+
+                    // Focus on Ligand
+                    plugin.managers.camera.focusLoci(lComp.representation.Loci);
+                    return;
+                }
+
+                if (data) {
+                    const trajectory = await plugin.builders.structure.parseTrajectory(data, 'pdb');
+                    await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
+                }
+            } catch (e) { console.warn("Load failed", e); }
+        };
+        load();
+    }, [initialized, pdbId, ligandUrl, receptorUrl, customPdbData]);
+
+    // Programmatic Control Effect
+    useEffect(() => {
+        if (!pluginRef.current || !visualState) return;
+
+        const applyState = async () => {
+            const plugin = pluginRef.current;
+            // Example: { type: 'focus', target: 'ligand' } or { type: 'zoom', residue: 45 }
+            if (visualState.type === 'focus' && visualState.target === 'ligand') {
+                // Try to find ligand component and focus
+                // Simplified: Reset camera if no specific ligand tracking yet
+                plugin.managers.camera.reset();
+            }
+            if (visualState.type === 'zoom' && visualState.residue) {
+                // Implement residue focus logic (requires structure traversal, skipping for MVP robustness)
+                console.log("Zoom request for residue", visualState.residue);
+            }
+            if (visualState.type === 'highlight') {
+                // Highlight logic
             }
         };
-
-        loadStructures();
-    }, [pdbId, ligandUrl, receptorUrl]); // ✅ Reload data when props change
+        applyState();
+    }, [visualState]);
 
     return (
-        <div className="molstar-wrapper">
-            <div
-                ref={parentRef}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    position: 'relative'
-                }}
-            />
-
-            {initError && (
-                <div className="init-fallback">
-                    <p>3D Viewer Error</p>
-                    <code>{initError}</code>
-                </div>
-            )}
-
+        <div className="molstar-wrapper-fixed">
+            <div ref={parentRef} className="molstar-host-canvas" />
             <style>{`
-                .molstar-wrapper {
+                .molstar-wrapper-fixed {
                     width: 100%;
                     height: 100%;
+                    background: #fff; /* Match requested white background */
                     position: relative;
-                    background: #000;
-                    border-radius: 8px;
                     overflow: hidden;
-                    border: 1px solid #1a1a1a;
                 }
-                .init-fallback {
-                    position: absolute;
-                    inset: 0;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    background: rgba(0,0,0,0.9);
-                    z-index: 100;
-                    padding: 20px;
-                    text-align: center;
+                .molstar-host-canvas {
+                    width: 100%;
+                    height: 100%;
                 }
-                .init-fallback p {
-                    color: #ff4444;
-                    font-weight: bold;
-                    margin-bottom: 10px;
+                .msp-plugin-ui-main {
+                    background: #fff !important;
                 }
-                .init-fallback code {
-                    font-size: 11px;
-                    color: #888;
-                    background: #111;
-                    padding: 8px;
-                    border-radius: 4px;
-                }
-                .msp-plugin-ui {
-                    background: #000 !important;
-                }
+                /* Hide glitchy UI overlays */
+                .msp-help, .msp-logo { display: none !important; }
             `}</style>
         </div>
     );
 };
 
-// Wrapper to opt out of StrictMode for Molstar
-const NonStrict = ({ children }) => <>{children}</>;
-
-const MolstarViewerWrapper = (props) => (
-    <NonStrict>
-        <MolstarViewer {...props} />
-    </NonStrict>
-);
-
-export default MolstarViewerWrapper;
+export default MolstarViewer;

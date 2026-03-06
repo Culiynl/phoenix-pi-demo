@@ -31,6 +31,7 @@ const FeudalOptimization = () => {
         addLog("Initializing Feudal RL Engine...", "info");
 
         try {
+            // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             await fetch(`${baseUrl}/api/feudal/optimize`, {
                 method: 'POST',
@@ -49,6 +50,7 @@ const FeudalOptimization = () => {
         const interval = setInterval(async () => {
             try {
                 // 1. Fetch live logs and history
+                // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
                 const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
                 const statusRes = await fetch(`${baseUrl}/api/feudal/status/${projectId}`);
                 const statusData = await statusRes.json();

@@ -110,7 +110,7 @@ class ProteinManager:
             fname = f"{pdb_id}_viz.png"
             # Ray trace slightly for better look
             pymol.cmd.png(os.path.join(IMG_DIR, fname), width=600, height=400, ray=1)
-            return f"http://localhost:8000/static/{fname}"
+            return f"http://https://g5gd0v28-8000.usw3.devtunnels.ms/static/{fname}"
         except: return None
 
 
@@ -286,7 +286,7 @@ print("Done.")
                     results = json.load(f)
                 
                 for route in results.get("routes", []):
-                    route["image_url"] = f"http://localhost:8000/static/{route['image']}"
+                    route["image_url"] = f"http://https://g5gd0v28-8000.usw3.devtunnels.ms/static/{route['image']}"
                 
                 return results
             return {"error": "No results generated"}

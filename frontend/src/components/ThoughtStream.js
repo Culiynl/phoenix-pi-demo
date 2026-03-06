@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../firebase';
-import { doc, onSnapshot } from "firebase/firestore";
+// Firebase removed for local polling
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const ThoughtStream = ({ missionId }) => {
+const ThoughtStream = ({ missionId, isThinking }) => {
     const [logs, setLogs] = useState([
         { type: 'system', content: 'Connecting to PHOENIX-PI Mission Control...', timestamp: new Date() }
     ]);
-    const [isThinking, setIsThinking] = useState(false);
     const scrollRef = React.useRef(null);
 
     useEffect(() => {
@@ -20,50 +18,50 @@ const ThoughtStream = ({ missionId }) => {
     useEffect(() => {
         if (!missionId) return;
 
-        const missionRef = doc(db, "missions", missionId);
+        let pollInterval;
+        const fetchLogs = async () => {
+            try {
+                const { api } = await import('../services/api');
+                const data = await api.getMissionLog(missionId);
 
-        // Real-time listener
-        const unsubscribe = onSnapshot(missionRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                setIsThinking(data.is_thinking || false);
-                if (data.thought_log) {
-                    const formattedLogs = data.thought_log.map(log => ({
+                if (data.log) {
+                    const formattedLogs = data.log.map(log => ({
                         ...log,
                         timestamp: log.timestamp ? new Date(log.timestamp) : new Date()
                     }));
                     setLogs(formattedLogs);
                 }
-            } else {
-                // Document hasn't been created yet (or backend failed to create it)
-                setLogs([{ type: 'system', content: 'Waiting for Mission Initialization...', timestamp: new Date() }]);
+            } catch (error) {
+                console.error("Polling error:", error);
             }
-        }, (error) => {
-            console.error("Firestore error:", error);
-            setLogs(prev => [...prev, { type: 'error', content: `Connection Error: ${error.message}`, timestamp: new Date() }]);
-        });
+        };
 
-        return () => unsubscribe();
+        // Initial fetch
+        fetchLogs();
+
+        // Start polling
+        pollInterval = setInterval(fetchLogs, 4000);
+
+        return () => clearInterval(pollInterval);
     }, [missionId]);
 
     const [input, setInput] = useState("");
+    const [sending, setSending] = useState(false);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || sending) return;
         const msg = input.trim();
-        setInput(""); // Clear input immediately
-
-        // Optimistic UI update handled by Firestore listener eventually, 
-        // but we could add a temp local log if needed.
+        setInput("");
+        setSending(true);
 
         try {
-            await fetch(`http://localhost:8000/api/mission/${missionId}/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: msg })
-            });
+            const { api } = await import('../services/api');
+            await api.chat(missionId, msg);
         } catch (e) {
             console.error("Chat failed", e);
+            alert("Message failed to send");
+        } finally {
+            setSending(false);
         }
     };
 
@@ -98,10 +96,11 @@ const ThoughtStream = ({ missionId }) => {
                 <input
                     className="chat-input"
                     type="text"
-                    placeholder="Message PHOENIX..."
+                    placeholder={sending ? "Phoenix is listening..." : "Direct Phoenix Mission Control..."}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    disabled={sending}
                 />
             </div>
             <style>{`

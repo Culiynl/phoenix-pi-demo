@@ -1,10 +1,50 @@
 import React, { useState } from 'react';
+import MolstarViewer from './MolstarViewer';
 
 const StandaloneTools = () => {
     const [activeTab, setActiveTab] = useState('docking');
     const [dockingInput, setDockingInput] = useState({ pdb: '', smiles: '' });
     const [dockingResult, setDockingResult] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    const [pdbSearchResults, setPdbSearchResults] = useState(null);
+
+    const runPdbSearch = async () => {
+        if (!dockingInput.pdb) return;
+        setLoading(true);
+        try {
+            // const res = await fetch(`http://localhost:8000/api/pdb/search?q=${encodeURIComponent(dockingInput.pdb)}`);
+            const res = await fetch(`http://localhost:8000/api/pdb/search?q=${encodeURIComponent(dockingInput.pdb)}`);
+            const data = await res.json();
+            setPdbSearchResults(data);
+        } catch (e) {
+            console.error(e);
+            alert("Search failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const selectPdb = (id) => {
+        // We need to communicate up to the parent viewer, but StandaloneTools is currently standalone.
+        // The user asked to "add mol star visualization and also maybe pair it with RCSB".
+        // StandaloneTools usually is just a side panel. 
+        // If we want to Load it, we might need a callback prop 'onLoadPdb'.
+        // For now, let's just pre-fill the docking input or alert.
+        // Actually, looking at the user request: "tools section you need to add the mol star visualization"
+        // If the Tools section is separate, it might need its own viewer?
+        // Or if this component is inside LiveWorkspace, it might have access to setMissionData?
+        // Based on file context, StandaloneTools seems unrelated to LiveWorkspace state.
+        // I will assume for now we just prefill for docking or copy to clipboard, 
+        // OR add a MolstarViewer right here in the tools panel?
+        // User said: "tools section you need to add the mol star visualization"
+        // Let's notify the user via a callback if possible, or add a viewer here.
+        // Let's add an activePdb state here and show a viewer if selected.
+        setDockingInput({ ...dockingInput, pdb: id });
+        setActivePdb(id);
+    };
+
+    const [activePdb, setActivePdb] = useState(null);
 
     const runDocking = async () => {
         setLoading(true);
@@ -28,7 +68,7 @@ const StandaloneTools = () => {
 
     return (
         <div className="standalone-tools">
-            <h3>🔬 Standalone Tools</h3>
+            <h3>Standalone Tools</h3>
             <p className="tools-desc">Quick analysis tools powered by AutoDock Vina, RDKit, and more</p>
 
             <div className="tool-tabs">
@@ -37,6 +77,12 @@ const StandaloneTools = () => {
                     onClick={() => setActiveTab('docking')}
                 >
                     Molecular Docking
+                </button>
+                <button
+                    className={activeTab === 'proteins' ? 'active' : ''}
+                    onClick={() => setActiveTab('proteins')}
+                >
+                    Protein Search
                 </button>
                 <button
                     className={activeTab === 'properties' ? 'active' : ''}
@@ -51,6 +97,48 @@ const StandaloneTools = () => {
                     Similarity Search
                 </button>
             </div>
+
+            {activeTab === 'proteins' && (
+                <div className="tool-panel">
+                    <h4>RCSB PDB Search</h4>
+                    {/* ... search inputs ... */}
+
+                    {activePdb && (
+                        <div style={{ height: '400px', margin: '20px 0', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
+                            <MolstarViewer pdbId={activePdb} />
+                        </div>
+                    )}
+
+                    <div className="search-bar-row">
+                        <input
+                            type="text"
+                            placeholder="Protein Name (e.g. EGFR, Kinase)"
+                            value={dockingInput.pdb}
+                            onChange={(e) => setDockingInput({ ...dockingInput, pdb: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Enter' && runPdbSearch()}
+                        />
+                        <button onClick={runPdbSearch} disabled={loading} style={{ width: '80px', marginBottom: '10px' }}>
+                            {loading ? '...' : 'Search'}
+                        </button>
+                    </div>
+
+                    {pdbSearchResults && (
+                        <div className="result-list-scroll">
+                            {pdbSearchResults.length === 0 && <div className="info-text">No results found.</div>}
+                            {pdbSearchResults.map((res) => (
+                                <div key={res.id} className="pdb-result-item" onClick={() => selectPdb(res.id)}>
+                                    <div className="pdb-id-badge">{res.id}</div>
+                                    <div className="pdb-info">
+                                        <div className="pdb-title">{res.title}</div>
+                                        <div className="pdb-meta">{res.organism} • {res.resolution || "N/A"}Å • {res.date}</div>
+                                    </div>
+                                    <button className="load-btn">LOAD</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {activeTab === 'docking' && (
                 <div className="tool-panel">
@@ -120,7 +208,7 @@ const StandaloneTools = () => {
                 }
                 .standalone-tools h3 {
                     margin: 0 0 8px 0;
-                    color: #F4B400;
+                    color: #ffffffff;
                     font-size: 16px;
                 }
                 .tools-desc {
@@ -150,8 +238,8 @@ const StandaloneTools = () => {
                     color: #fff;
                 }
                 .tool-tabs button.active {
-                    background: #F4B400;
-                    color: #000;
+                    background: #3b82f6;
+                    color: #ffffffff;
                     font-weight: bold;
                 }
                 .tool-panel {
@@ -179,18 +267,18 @@ const StandaloneTools = () => {
                 }
                 .tool-panel button {
                     width: 100%;
-                    background: #F4B400;
+                    background: #3b82f6;
                     border: none;
                     border-radius: 6px;
                     padding: 10px;
-                    color: #000;
+                    color: #ffffffff;
                     font-weight: bold;
                     font-size: 12px;
                     cursor: pointer;
                     transition: background 0.2s;
                 }
                 .tool-panel button:hover:not(:disabled) {
-                    background: #ffcc00;
+                    background: #3b83f677;
                 }
                 .tool-panel button:disabled {
                     opacity: 0.5;
@@ -218,6 +306,16 @@ const StandaloneTools = () => {
                     color: #666;
                     font-style: italic;
                 }
+                
+                .result-list-scroll { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+                .pdb-result-item { display: flex; align-items: center; gap: 10px; background: #0a0a0a; border: 1px solid #222; padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+                .pdb-result-item:hover { background: #151515; border-color: #4285F4; }
+                .pdb-id-badge { background: #4285F4; color: #fff; font-weight: 900; font-size: 12px; padding: 4px 8px; border-radius: 4px; width: 50px; text-align: center; }
+                .pdb-info { flex-grow: 1; overflow: hidden; }
+                .pdb-title { font-size: 11px; font-weight: bold; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .pdb-meta { font-size: 10px; color: #666; margin-top: 2px; }
+                .load-btn { background: none; border: 1px solid #333; color: #4285F4; font-size: 9px; padding: 4px 8px; width: auto; }
+                .search-bar-row { display: flex; gap: 10px; }
             `}</style>
         </div>
     );

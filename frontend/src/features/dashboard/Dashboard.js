@@ -1,40 +1,81 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ThoughtStream from '../../components/ThoughtStream';
 import LiveWorkspace from '../../components/LiveWorkspace';
-import { db } from '../../firebase';
-import { doc, onSnapshot } from "firebase/firestore";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+// Firebase removed for local polling
+// Firebase removed for local polling
 
 const Dashboard = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState('3d');
-  const [summary, setSummary] = React.useState('');
+  const [missionData, setMissionData] = useState(null);
   const [awaitingConfirm, setAwaitingConfirm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isResuming, setIsResuming] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [autoCorrect, setAutoCorrect] = useState(false);
+  const [isUpdatingAutoCorrect, setIsUpdatingAutoCorrect] = useState(false);
   const [researchMode, setResearchMode] = useState('hybrid');
 
-  React.useEffect(() => {
+  const handleResume = useCallback(async () => {
+    setIsResuming(true);
+    try {
+      const { api } = await import('../../services/api');
+      await api.resumeMission(id);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to proceed: " + err.message);
+    } finally {
+      setIsResuming(false);
+    }
+  }, [id]);
+
+  const handleToggleAutoCorrect = async () => {
+    const nextState = !autoCorrect;
+    setAutoCorrect(nextState); // Immediate visual feedback
+    setIsUpdatingAutoCorrect(true);
+    try {
+      const { api } = await import('../../services/api');
+      await api.updateMissionSettings(id, nextState);
+    } catch (err) {
+      console.error(err);
+      // Revert if failed
+      setAutoCorrect(!nextState);
+    } finally {
+      // Wait a bit before allowing poll to overwrite, ensures backend has saved
+      setTimeout(() => setIsUpdatingAutoCorrect(false), 2000);
+    }
+  };
+
+  useEffect(() => {
     if (!id) return;
-    const missionRef = doc(db, "missions", id);
-    const unsubscribe = onSnapshot(missionRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setSummary(data.research_summary || '');
+
+    let pollInterval;
+    const fetchMission = async () => {
+      try {
+        const { api } = await import('../../services/api');
+        const data = await api.getMission(id);
+
+        setMissionData(data);
+
         setAwaitingConfirm(data.awaiting_confirmation || false);
         setCurrentStep(data.current_step || 1);
         setIsThinking(data.is_thinking || false);
-        setAutoCorrect(data.auto_correct || false);
+        if (!isUpdatingAutoCorrect) {
+          setAutoCorrect(data.auto_correct || false);
+        }
         setResearchMode(data.research_mode || 'hybrid');
+      } catch (err) {
+        console.error("Dashboard polling error:", err);
       }
-    });
-    return () => unsubscribe();
-  }, [id]);
+    };
+
+    fetchMission();
+    pollInterval = setInterval(fetchMission, 4000);
+
+    return () => clearInterval(pollInterval);
+  }, [id, isUpdatingAutoCorrect]);
 
   // Auto-trigger resume if awaiting confirmation and auto-confirm is ON
   useEffect(() => {
@@ -42,43 +83,7 @@ const Dashboard = () => {
       console.log("Auto-Confirm active: Triggering resume...");
       handleResume();
     }
-  }, [awaitingConfirm, autoCorrect, isResuming, isThinking]);
-
-  const handleToggleAutoCorrect = async () => {
-    try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      const formData = new FormData();
-      formData.append('mission_id', id);
-      formData.append('auto_correct', !autoCorrect);
-
-      await fetch(`${baseUrl}/api/mission/settings`, {
-        method: 'POST',
-        body: formData
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleResume = async () => {
-    setIsResuming(true);
-    try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      const formData = new FormData();
-      formData.append('mission_id', id);
-
-      const response = await fetch(`${baseUrl}/api/mission/resume`, {
-        method: 'POST',
-        body: formData
-      });
-      if (!response.ok) throw new Error("Failed to resume");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to proceed: " + err.message);
-    } finally {
-      setIsResuming(false);
-    }
-  };
+  }, [awaitingConfirm, autoCorrect, isResuming, isThinking, handleResume]);
 
   const steps = [
     "Literature & Abstracts",
@@ -96,7 +101,7 @@ const Dashboard = () => {
       <div className="mission-header-stacked">
         <div className="header-top">
           <div className="title-area">
-            <h2>MISSION: <span className="highlight">{id}</span> <small style={{ fontSize: '10px', color: '#666', marginLeft: '10px', textTransform: 'uppercase' }}>Mode: {researchMode}</small></h2>
+            <h2>MISSION: <span className="highlight">{missionData?.target_name || id}</span> <span className="mode-badge">{researchMode.toUpperCase()}</span></h2>
             {isThinking && <div className="thinking-status">
               <span className="dot pulse"></span> Gemini is Thinking...
             </div>}
@@ -114,8 +119,10 @@ const Dashboard = () => {
             <button
               className={`success-btn ${autoCorrect ? 'on' : ''}`}
               onClick={handleToggleAutoCorrect}
+              disabled={isUpdatingAutoCorrect}
+              style={{ opacity: isUpdatingAutoCorrect ? 0.7 : 1, cursor: isUpdatingAutoCorrect ? 'wait' : 'pointer' }}
             >
-              Auto-Confirm: {autoCorrect ? 'ON' : 'OFF'}
+              {isUpdatingAutoCorrect ? 'Syncing...' : `Auto-Confirm: ${autoCorrect ? 'ON' : 'OFF'}`}
             </button>
             <button className="danger-btn" onClick={() => navigate('/projects')}>Abort</button>
           </div>
@@ -134,10 +141,10 @@ const Dashboard = () => {
       {/* Main Split Layout */}
       <div className="mission-body">
         <div className="left-panel">
-          <ThoughtStream missionId={id} />
+          <ThoughtStream missionId={id} isThinking={isThinking} />
         </div>
         <div className="right-panel">
-          <LiveWorkspace missionId={id} activeView={activeView} setActiveView={setActiveView} />
+          <LiveWorkspace missionId={id} missionData={missionData} activeView={activeView} setActiveView={setActiveView} />
         </div>
       </div>
 
@@ -174,7 +181,7 @@ const Dashboard = () => {
         }
         .panel-label {
             font-size: 10px;
-            color: #4285F4;
+            color: #f87171;
             font-weight: bold;
             margin-bottom: 8px;
             letter-spacing: 1px;
@@ -220,25 +227,27 @@ const Dashboard = () => {
             text-transform: uppercase;
         }
         .resume-btn {
-            background: #4285F4;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
             color: #fff;
-            box-shadow: 0 0 15px rgba(66, 133, 244, 0.4);
+            border: 1px solid #7f1d1d !important;
+            box-shadow: 0 0 15px rgba(153, 27, 27, 0.5);
             animation: pulse-border 2s infinite;
         }
         @keyframes pulse-border {
-            0% { box-shadow: 0 0 5px rgba(66, 133, 244, 0.4); }
-            50% { box-shadow: 0 0 20px rgba(66, 133, 244, 0.8); }
-            100% { box-shadow: 0 0 5px rgba(66, 133, 244, 0.4); }
+            0%   { box-shadow: 0 0 5px rgba(153, 27, 27, 0.4); }
+            50%  { box-shadow: 0 0 22px rgba(153, 27, 27, 0.9); }
+            100% { box-shadow: 0 0 5px rgba(153, 27, 27, 0.4); }
         }
         .success-btn {
             background: #1a1a1a;
-            color: #444;
-            border: 1px solid #333 !important;
+            color: #888;
+            border: 1px solid #444 !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .success-btn:hover {
-            border-color: #666 !important;
-            color: #888;
+            border-color: #888 !important;
+            color: #fff;
+            cursor: pointer;
         }
         .success-btn.on {
             background: rgba(76, 175, 80, 0.1);
@@ -256,7 +265,7 @@ const Dashboard = () => {
         }
         .thinking-status {
             font-size: 11px;
-            color: #4285F4;
+            color: #f87171;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -266,7 +275,7 @@ const Dashboard = () => {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #4285F4;
+            background: #991b1b;
         }
         .pulse {
             animation: pulse-animation 1.5s infinite;
@@ -308,9 +317,10 @@ const Dashboard = () => {
             border: 1px solid #333;
         }
         .step.active .step-num {
-            background: #4285F4;
-            border-color: #4285F4;
+            background: #991b1b;
+            border-color: #7f1d1d;
             color: white;
+            box-shadow: 0 0 8px rgba(153, 27, 27, 0.6);
         }
         .step.complete .step-num {
             background: #4CAF50;
@@ -324,12 +334,30 @@ const Dashboard = () => {
             letter-spacing: 0.8px;
         }
         .mission-header-stacked h2 {
-            font-size: 20px;
+            font-size: 18px;
+            font-weight: 800;
             color: #fff;
             margin: 0;
-            letter-spacing: -0.5px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
-        .highlight { color: #4285F4; }
+        .highlight {
+            color: #f87171;
+            font-weight: 900;
+        }
+        .mode-badge {
+            display: inline-block;
+            margin-left: 12px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            background: rgba(153, 27, 27, 0.15);
+            color: #f87171;
+            border: 1px solid #7f1d1d;
+            padding: 2px 8px;
+            border-radius: 4px;
+            vertical-align: middle;
+        }
         .mission-body {
             display: flex;
             flex-grow: 1;
@@ -350,14 +378,6 @@ const Dashboard = () => {
             border-radius: 4px;
             margin-right: 10px;
             cursor: pointer;
-        }
-        .success-btn {
-            background: #2e7d32;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: default;
         }
       `}</style>
     </div>

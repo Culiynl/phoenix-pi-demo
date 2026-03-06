@@ -1,18 +1,38 @@
 import json
 import google.generativeai as genai
 from Bio import Entrez
-from config import GOOGLE_API_KEY, ENTREZ_EMAIL
+from config import GOOGLE_API_KEY, ENTREZ_EMAIL, GEMINI_MODEL, GEMINI_PRO_MODEL
 from schemas import DiseaseQuery
+import asyncio
+from functools import wraps
 
-# Setup
-genai.configure(api_key=GOOGLE_API_KEY)
+# Setup - Using REST transport to bypass asyncio gRPC loop caching issues
+genai.configure(api_key=GOOGLE_API_KEY, transport="rest")
 Entrez.email = ENTREZ_EMAIL
+
+def retry_llm(max_retries=3, delay=2):
+    """Simple decorator for retrying LLM calls."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_err = None
+            for i in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_err = e
+                    print(f"LLM Retry {i+1}/{max_retries} failed: {e}")
+                    import time
+                    time.sleep(delay * (i + 1))
+            raise last_err
+        return wrapper
+    return decorator
 
 def analyze_full_literature(pdf_paths: list[str], target_disease: str):
     """
     PHOENIX-PI: Uses Gemini 1.5 Pro's 1M context window to analyze full PDF texts.
     """
-    model = genai.GenerativeModel('gemini-3-pro-preview')
+    model = genai.GenerativeModel(GEMINI_PRO_MODEL)
     
     # In a real implementation:
     # 1. Upload PDFs to Gemini File API
@@ -48,10 +68,15 @@ def review_literature(query: DiseaseQuery):
             pass
     
     prompt = f"Extract drug targets for {query.disease_name} from these abstracts:\n" + "\n".join(abstracts[:5])
-    model = genai.GenerativeModel('gemini-3-pro-preview')
-    res = model.generate_content(
-        prompt + "\nOutput JSON: { 'targets': [ { 'name': '...', 'target_type': '...', 'druggability': '...' } ] }"
-    )
+    model = genai.GenerativeModel(GEMINI_MODEL)
+    
+    @retry_llm()
+    def do_call():
+        return model.generate_content(
+            prompt + "\nOutput JSON: { 'targets': [ { 'name': '...', 'target_type': '...', 'druggability': '...' } ] }"
+        )
+    
+    res = do_call()
     
     try:
         clean = res.text.replace('```json','').replace('```','').strip()
@@ -153,33 +178,42 @@ def summarize_literature_gemini(papers: list, full_texts: list = None, existing_
     else:
         full_prompt = f"{prompt}\n\nNEW CONTEXT:\n{context}"
     
-    model = genai.GenerativeModel('gemini-3-pro-preview')
+    model = genai.GenerativeModel(GEMINI_PRO_MODEL)
     try:
-        res = model.generate_content(full_prompt)
+        @retry_llm()
+        def do_call():
+            return model.generate_content(full_prompt)
+        res = do_call()
         return res.text
     except Exception as e:
         return f"Error generating summary: {str(e)}"
 
 def generate_mission_title(prompt: str) -> str:
     """Generates a short, catchy title/target name from a user description."""
-    model = genai.GenerativeModel('gemini-3-pro-preview')
+    model = genai.GenerativeModel(GEMINI_MODEL)
     try:
-        res = model.generate_content(
-            f"Generate a short (3-5 words) scientific project title for this request: '{prompt}'. "
-            "Output ONLY the title, no quotes or extra text."
-        )
+        @retry_llm()
+        def do_call():
+            return model.generate_content(
+                f"Generate a short (3-5 words) scientific project title for this request: '{prompt}'. "
+                "Output ONLY the title, no quotes or extra text."
+            )
+        res = do_call()
         return res.text.strip().replace('"', '').replace("'", "")
     except:
         return "New Mission"
 
 def extract_search_queries(prompt: str) -> list[str]:
     """Extracts key scientific terms for ArXiv/PDB searching."""
-    model = genai.GenerativeModel('gemini-3-pro-preview')
+    model = genai.GenerativeModel(GEMINI_MODEL)
     try:
-        res = model.generate_content(
-            f"Extract 2-3 specific scientific search queries (e.g., protein names, disease mechanisms) "
-            f"from this text: '{prompt}'. Output as JSON list: ['query1', 'query2']"
-        )
+        @retry_llm()
+        def do_call():
+            return model.generate_content(
+                f"Extract 2-3 specific scientific search queries (e.g., protein names, disease mechanisms) "
+                f"from this text: '{prompt}'. Output as JSON list: ['query1', 'query2']"
+            )
+        res = do_call()
         text = res.text.strip()
         if text.startswith("```json"): text = text.replace("```json", "").replace("```", "")
         return json.loads(text)

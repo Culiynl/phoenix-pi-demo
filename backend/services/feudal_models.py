@@ -69,10 +69,19 @@ class Vocab:
         self.n = len(self.all)
 
 class DatasetNormalizer:
-    def __init__(self):
-        self.means = np.array([350.0, 3.0, 2.0, 5.0, 80.0])
-        self.stds = np.array([100.0, 1.5, 1.5, 3.0, 40.0])
-    def normalize(self, raw): return (raw - self.means) / (self.stds + 1e-8)
+    def __init__(self, path="property_stats.json"):
+        # Attempt to load from JSON, fallback to defaults if not found
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                stats = json.load(f)
+            self.means = np.array(stats['means'][:5], dtype=np.float32)
+            self.stds = np.array(stats['stds'][:5], dtype=np.float32)
+        else:
+            self.means = np.array([350.0, 3.0, 2.0, 5.0, 80.0])
+            self.stds = np.array([100.0, 1.5, 1.5, 3.0, 40.0])
+
+    def normalize(self, raw): 
+        return (raw - self.means) / (self.stds + 1e-8)
 
 # --- UTILS ---
 

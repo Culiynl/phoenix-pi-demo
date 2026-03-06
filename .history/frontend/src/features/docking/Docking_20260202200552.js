@@ -9,7 +9,7 @@ const Docking = () => {
     const { projectId } = useParams();
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    
+
     // UI State
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ const Docking = () => {
                 initialShowRemoteState: false,
                 initialShowSequence: false,
                 initialShowLog: false,
-                controlsDisplay: 'reactive', 
+                controlsDisplay: 'reactive',
             };
             spec.components = { remoteState: 'none' };
 
@@ -36,7 +36,7 @@ const Docking = () => {
                 const ctx = await createPluginUI({
                     target: parentRef.current,
                     spec: spec,
-                    render: renderReact18 
+                    render: renderReact18
                 });
                 pluginRef.current = ctx;
                 setIsPluginReady(true);
@@ -51,24 +51,24 @@ const Docking = () => {
     // Function to call Backend with LOGGING
     const handleRunDocking = async () => {
         console.log("--- 1. Button Clicked ---");
-        
+
         if (!projectId) {
             console.warn("Operation Aborted: No Project ID found.");
             alert("No project selected. Please go to Projects and select one.");
             return;
         }
-        
+
         const payload = {
             project_id: projectId,
             smiles: smiles
         };
 
         console.log("--- 2. Sending Payload ---", payload);
-        
+
         setLoading(true);
         try {
-            console.log(`--- 3. Fetching: http://localhost:8000/api/docking/run ---`);
-            const response = await fetch('http://localhost:8000/api/docking/run', {
+            console.log(`--- 3. Fetching: http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run ---`);
+            const response = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -79,7 +79,7 @@ const Docking = () => {
             // Attempt to parse JSON
             const data = await response.json();
             console.log("--- 5. Response Data (JSON):", data);
-            
+
             if (data.success) {
                 console.log("--- 6. Success detected. Loading structure...");
                 setResult(data);
@@ -99,13 +99,13 @@ const Docking = () => {
     // Helper to load URL into Mol*
     const loadStructure = async (url) => {
         if (!pluginRef.current) return;
-        
-        const fullUrl = `http://localhost:8000${url}`;
+
+        const fullUrl = `http://https://g5gd0v28-8000.usw3.devtunnels.ms${url}`;
         console.log("--- 7. Loading PDB into Mol* from:", fullUrl);
 
         const plugin = pluginRef.current;
         plugin.clear();
-        
+
         try {
             const data = await plugin.builders.data.download({ url: fullUrl }, { state: { isGhost: true } });
             const trajectory = await plugin.builders.structure.parseTrajectory(data, 'pdb');
@@ -117,55 +117,55 @@ const Docking = () => {
     };
 
     return (
-        <div className="docking-container" style={{display: 'flex', gap: '20px', height: '100%'}}>
-            
+        <div className="docking-container" style={{ display: 'flex', gap: '20px', height: '100%' }}>
+
             {/* Left Panel: Controls */}
-            <div className="card" style={{flex: '0 0 300px', height: 'fit-content'}}>
+            <div className="card" style={{ flex: '0 0 300px', height: 'fit-content' }}>
                 <h2>Docking Controls</h2>
-                
-                <div style={{marginBottom: '10px'}}>
-                    <label style={{fontSize: '0.8rem', color: '#888'}}>Project ID</label>
-                    <div style={{fontWeight: 'bold'}}>{projectId || "None Selected"}</div>
+
+                <div style={{ marginBottom: '10px' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#888' }}>Project ID</label>
+                    <div style={{ fontWeight: 'bold' }}>{projectId || "None Selected"}</div>
                 </div>
 
-                <div style={{marginBottom: '15px'}}>
-                    <label style={{fontSize: '0.8rem', color: '#888'}}>Ligand (SMILES)</label>
-                    <textarea 
-                        className="technical-input" 
+                <div style={{ marginBottom: '15px' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#888' }}>Ligand (SMILES)</label>
+                    <textarea
+                        className="technical-input"
                         rows={4}
                         value={smiles}
                         onChange={(e) => setSmiles(e.target.value)}
-                        style={{width: '100%', marginTop: '5px'}}
+                        style={{ width: '100%', marginTop: '5px' }}
                     />
                 </div>
 
-                <button 
-                    className="primary-btn" 
+                <button
+                    className="primary-btn"
                     onClick={handleRunDocking}
                     disabled={loading || !isPluginReady || !projectId}
-                    style={{width: '100%'}}
+                    style={{ width: '100%' }}
                 >
                     {loading ? "Calculating..." : "Run Vina Docking"}
                 </button>
 
                 {result && (
-                    <div style={{marginTop: '20px', padding: '10px', background: '#1a1a1a', borderRadius: '4px'}}>
-                        <h4 style={{margin: '0 0 5px 0', color: '#4ade80'}}>Success</h4>
+                    <div style={{ marginTop: '20px', padding: '10px', background: '#1a1a1a', borderRadius: '4px' }}>
+                        <h4 style={{ margin: '0 0 5px 0', color: '#4ade80' }}>Success</h4>
                         <div>Score: <strong>{result.score} kcal/mol</strong></div>
-                        <div style={{fontSize: '0.8rem', color: '#888', marginTop: '5px'}}>ID: {result.run_id}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '5px' }}>ID: {result.run_id}</div>
                     </div>
                 )}
             </div>
 
             {/* Right Panel: Viewer */}
-            <div className="card" style={{flex: 1, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column'}}>
-                 <div 
-                    ref={parentRef} 
-                    style={{ 
+            <div className="card" style={{ flex: 1, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <div
+                    ref={parentRef}
+                    style={{
                         flex: 1,
                         background: '#000',
                         position: 'relative'
-                    }} 
+                    }}
                 />
             </div>
         </div>

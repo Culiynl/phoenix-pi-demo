@@ -1,13 +1,17 @@
 :root {
   --bg-dark: #050505;
-  --bg-card: #0f0f0f;
-  --primary: #3b82f6;
-  --border: #353535;
+  --bg-card: #0c0c0c;
+  --primary: #991b1b;
+  /* Dark Red */
+  --primary-glow: rgba(153, 27, 27, 0.4);
+  --border: #222222;
   --text-main: #f3f4f6;
   --text-dim: #71717a;
+  --accent-pink: #991b1b;
+  /* Also updated accent to red */
 
-  /* Use Segoe UI stack */
-  --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  /* Use modern typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
@@ -80,6 +84,7 @@ body {
   background: var(--primary);
   color: white;
   font-weight: 600;
+  box-shadow: 0 0 10px var(--primary-glow);
 }
 
 /* Blocky Card Styling */
@@ -140,7 +145,7 @@ body {
 .spinner {
   width: 30px;
   height: 30px;
-  border: 3px solid rgba(59, 130, 246, 0.3);
+  border: 3px solid rgba(239, 68, 68, 0.3);
   border-radius: 50%;
   border-top-color: var(--primary);
   animation: spin 1s linear infinite;
@@ -227,7 +232,7 @@ td {
 }
 
 input[type="text"] {
-  background: #141414;
+  background: #0f0f0f;
   border: 1px solid var(--border);
   color: white;
   padding: 10px 14px;
@@ -236,7 +241,7 @@ input[type="text"] {
   font-size: 0.95rem;
   flex: 1;
   /* Makes it take up available space */
-  transition: border-color 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 input[type="text"]:focus {
@@ -362,7 +367,7 @@ canvas {
 }
 
 .pose-row.active {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(239, 68, 68, 0.2);
   border-left: 3px solid var(--primary);
 }
 
@@ -434,4 +439,73 @@ canvas {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* Layout Fixes for 3D Tab */
+.view-panel-fixed {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.viewer-header-clean {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.viewer-main-constrained {
+  flex: 1;
+  min-height: 0;
+  /* Important to keep Molstar inside the box */
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+/* High-Visibility Red Button */
+.action-btn-blue {
+  background: var(--primary) !important;
+  color: white !important;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 12px var(--primary-glow);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-btn-blue:hover {
+  background: #7f1d1d !important;
+  /* Even darker red on hover */
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px var(--primary-glow);
+}
+
+/* Right-aligned Badge */
+.pdb-badge.local-glow {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid #ef4444;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  font-family: 'Consolas', monospace;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
 }

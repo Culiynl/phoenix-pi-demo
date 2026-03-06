@@ -84,7 +84,10 @@ from dotenv import load_dotenv
 import os
 load_dotenv() # This loads the .env file locally
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-ENTREZ_EMAIL = "your.email@example.com"
+ENTREZ_EMAIL = os.getenv("ENTREZ_EMAIL", "default@example.com")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+GEMINI_PRO_MODEL = os.getenv("GEMINI_PRO_MODEL", "gemini-3.1-pro-preview")
+
 
 CHECKPOINT_PATH = os.path.join(MODEL_CHECKPOINTS, "feudal_model.pt")
 VOCAB_PATH = os.path.join(MODEL_CHECKPOINTS, "master_vocab.json")
@@ -100,5 +103,7 @@ try:
     import transformers.modeling_utils
     transformers.utils.import_utils.check_torch_load_is_safe = lambda: None
     transformers.modeling_utils.check_torch_load_is_safe = lambda: None
-except ImportError:
+except Exception as e:
+    # Catching generic Exception because broken envs might raise RuntimeError, ImportError, etc.
+    print(f"Warning: Transformers patch failed, skipping. Error: {e}")
     pass

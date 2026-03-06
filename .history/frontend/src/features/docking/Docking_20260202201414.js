@@ -12,14 +12,14 @@ const Docking = () => {
     const navigate = useNavigate();
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    
+
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [loading, setLoading] = useState(false);
     const [isPluginReady, setIsPluginReady] = useState(false);
-    
+
     // Pose Management
     const [poses, setPoses] = useState([]); // List of { index, energy }
-    const [activePose, setActivePose] = useState(0); 
+    const [activePose, setActivePose] = useState(0);
 
     useEffect(() => {
         if (!parentRef.current || pluginRef.current) return;
@@ -34,7 +34,7 @@ const Docking = () => {
             const ctx = await createPluginUI({
                 target: parentRef.current,
                 spec: spec,
-                render: renderReact18 
+                render: renderReact18
             });
             pluginRef.current = ctx;
             setIsPluginReady(true);
@@ -45,13 +45,13 @@ const Docking = () => {
     const handleRunDocking = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8000/api/docking/run', {
+            const response = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ project_id: projectId, smiles: smiles })
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 // In a real Vina output, we'd parse the multiple models. 
                 // For this UI, we'll simulate finding 9 poses from the output
@@ -75,15 +75,15 @@ const Docking = () => {
         const plugin = pluginRef.current;
         await plugin.clear();
 
-        const fullUrl = `http://localhost:8000${url}`;
-        
+        const fullUrl = `http://https://g5gd0v28-8000.usw3.devtunnels.ms${url}`;
+
         try {
             const data = await plugin.builders.data.download({ url: fullUrl });
             const trajectory = await plugin.builders.structure.parseTrajectory(data, 'pdb');
-            
+
             // Apply only the specific model (pose) from the PDB trajectory
             await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default', {
-                modelIndex: poseIndex 
+                modelIndex: poseIndex
             });
         } catch (e) { console.error(e); }
     };
@@ -97,7 +97,7 @@ const Docking = () => {
 
     const [resultUrl, setResultUrl] = useState(null);
     // Capture result URL for switching poses
-    useEffect(() => { if(poses.length > 0 && !resultUrl) setResultUrl(poses[0].url); }, [poses]);
+    useEffect(() => { if (poses.length > 0 && !resultUrl) setResultUrl(poses[0].url); }, [poses]);
 
     return (
         <div className="main-content">
@@ -105,38 +105,38 @@ const Docking = () => {
                 <button className="primary-btn" onClick={() => navigate(`/dashboard/${projectId}`)}>
                     ← Back to Dashboard
                 </button>
-                <h2 style={{margin: 0}}>Molecular Docking: {projectId}</h2>
+                <h2 style={{ margin: 0 }}>Molecular Docking: {projectId}</h2>
             </div>
 
             <div className="docking-grid">
                 {/* Left: Controls & Pose List */}
-                <div className="card" style={{margin: 0, display: 'flex', flexDirection: 'column'}}>
-                    <h3 style={{fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '15px'}}>CONTROLS</h3>
-                    
-                    <div style={{background: '#141414', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.8rem'}}>
-                        <div style={{color: '#4ade80'}}>• 3D Engine: Ready</div>
-                        <div style={{color: 'var(--text-dim)'}}>• Project: {projectId}</div>
+                <div className="card" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '15px' }}>CONTROLS</h3>
+
+                    <div style={{ background: '#141414', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.8rem' }}>
+                        <div style={{ color: '#4ade80' }}>• 3D Engine: Ready</div>
+                        <div style={{ color: 'var(--text-dim)' }}>• Project: {projectId}</div>
                     </div>
 
-                    <label style={{fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '5px'}}>LIGAND (SMILES)</label>
-                    <textarea 
-                        className="technical-input" 
-                        style={{background: '#000', border: '1px solid var(--border)', color: 'white', padding: '10px', borderRadius: '4px', resize: 'none', height: '80px', marginBottom: '15px'}}
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '5px' }}>LIGAND (SMILES)</label>
+                    <textarea
+                        className="technical-input"
+                        style={{ background: '#000', border: '1px solid var(--border)', color: 'white', padding: '10px', borderRadius: '4px', resize: 'none', height: '80px', marginBottom: '15px' }}
                         value={smiles}
                         onChange={(e) => setSmiles(e.target.value)}
                     />
 
-                    <button className="primary-btn" style={{width: '100%'}} onClick={handleRunDocking} disabled={loading}>
+                    <button className="primary-btn" style={{ width: '100%' }} onClick={handleRunDocking} disabled={loading}>
                         {loading ? "Running Vina..." : "Start Docking Calculation"}
                     </button>
 
                     {poses.length > 0 && (
                         <>
-                            <h3 style={{fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '25px', marginBottom: '10px'}}>DOCKING POSES</h3>
+                            <h3 style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '25px', marginBottom: '10px' }}>DOCKING POSES</h3>
                             <div className="pose-table-container">
                                 {poses.map((p) => (
-                                    <div 
-                                        key={p.id} 
+                                    <div
+                                        key={p.id}
                                         className={`pose-row ${activePose === p.id ? 'active' : ''}`}
                                         onClick={() => selectPose(p.id)}
                                     >
@@ -151,7 +151,7 @@ const Docking = () => {
                 </div>
 
                 {/* Right: Mol* Viewer */}
-                <div className="card" style={{margin: 0, padding: 0, background: '#000'}}>
+                <div className="card" style={{ margin: 0, padding: 0, background: '#000' }}>
                     <div ref={parentRef} className="molstar-container" />
                 </div>
             </div>

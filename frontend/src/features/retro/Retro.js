@@ -79,7 +79,7 @@ const Retro = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
                 <h4 style={{ margin: 0 }}>Route {i + 1}</h4>
                 <div style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>
-                  Score: {route.scores?.["state score"]?.toFixed(4)}
+                  Score: {route.scores?.["state score"]?.toFixed(4) || route.score?.toFixed(4)}
                 </div>
               </div>
 
@@ -91,9 +91,23 @@ const Retro = () => {
                     className="retro-image"
                   />
                 ) : (
-                  <div className="stats-placeholder">Image generation failed</div>
+                  <div className="stat-row" style={{ justifyContent: 'center', height: '150px', background: '#222' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#666' }}>Structure Visualization</span>
+                  </div>
                 )}
               </div>
+
+              {route.mermaid && (
+                <div className="mermaid-container" style={{ marginTop: '15px', padding: '10px', background: '#000', borderRadius: '4px', border: '1px solid #333' }}>
+                  <h5 style={{ margin: '0 0 10px 0', fontSize: '0.75rem', color: '#888' }}>SYNTHETIC FLOW</h5>
+                  <pre style={{ fontSize: '0.7rem', color: '#0f0', overflowX: 'auto' }}>
+                    {route.mermaid}
+                  </pre>
+                  <p style={{ fontSize: '0.65rem', color: '#555', marginTop: '5px' }}>
+                    * Nodes represent precursors or intermediates.
+                  </p>
+                </div>
+              )}
 
               <div className="route-details" style={{ marginTop: '15px' }}>
                 <div className="stat-row">
@@ -106,27 +120,17 @@ const Retro = () => {
                 </div>
               </div>
 
-              {/* Purchasability Analysis Section */}
-              <div className="purchasability-section" style={{ marginTop: '15px', padding: '10px', background: '#1a1a1a', borderRadius: '4px' }}>
-                <h5 style={{ margin: '0 0 10px 0', color: '#ffb74d' }}>🛍️ Purchasability Analysis (MolPort)</h5>
-                <div style={{ fontSize: '0.85rem', color: '#ccc' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Stock Availability:</span>
-                    <span style={{ color: '#4caf50' }}>High (3 Suppliers)</span>
+              {/* Reaction Steps List */}
+              <div className="steps-list" style={{ marginTop: '15px' }}>
+                <h5 style={{ margin: '0 0 5px 0', fontSize: '0.8rem' }}>Steps:</h5>
+                {route.steps?.map((step, idx) => (
+                  <div key={idx} style={{ fontSize: '0.75rem', padding: '4px 0', borderBottom: '1px solid #222' }}>
+                    <span style={{ color: 'var(--primary)' }}>{step.reaction_name}:</span> {step.reactants}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-                    <span>Est. Cost:</span>
-                    <span>$120 / g</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-                    <span>Lead Time:</span>
-                    <span>2-3 Weeks</span>
-                  </div>
-                  <button className="secondary-btn" style={{ marginTop: '10px', width: '100%', fontSize: '0.8rem' }}>
-                    Generate Shopping List
-                  </button>
-                </div>
+                ))}
               </div>
+
+
             </div>
           ))}
         </div>

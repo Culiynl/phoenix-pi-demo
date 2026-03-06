@@ -24,11 +24,14 @@ try:
 except Exception:
     CHEMBL_AVAILABLE = False
 
+# ADMET import removed to prevent dependency conflicts
+
 # --- CONFIG & STATE ---
 from config import (
     BASE_DIR, PDB_DIR, P2RANK_EXEC, IMG_DIR, 
-    AIZYNTH_ENV_PYTHON, AIZYNTH_CLI, AIZYNTH_CONFIG
+    AIZYNTH_ENV_PYTHON, AIZYNTH_CLI, AIZYNTH_CONFIG, PROJECTS_DIR
 )
+DATA_DIR = os.path.join(BASE_DIR, "data")
 from state import log_msg
 
 
@@ -129,9 +132,63 @@ class ProteinManager:
             fname = f"{pdb_id}_viz.png"
             # Ray trace slightly for better look
             pymol.cmd.png(os.path.join(IMG_DIR, fname), width=600, height=400, ray=1)
+            # return f"http://localhost:8000/static/{fname}"
             return f"http://localhost:8000/static/{fname}"
         except: return None
 
+
+
+# ADMET-AI is now decoupled to run via subprocess to avoid dependency conflicts
+# checks are done at runtime
+ADMET_AVAILABLE = True 
+
+# ...
+
+class ADMETManager:
+    @staticmethod
+    def predict_properties(smiles: str):
+        """Runs ADMET-AI via a subprocess (services/admet_worker.py)."""
+        import subprocess
+        import json
+        import os
+        from config import BASE_DIR
+        
+        # Configuration for the standalone environment python executable
+        # User can set ADMET_PYTHON_EXE in .env to point to a specific conda env python
+        admet_python = os.getenv("ADMET_PYTHON_EXE", "python")
+        
+        worker_script = os.path.join(BASE_DIR, "services", "admet_worker.py")
+        
+        try:
+            # Run the worker script
+            result = subprocess.run(
+                [admet_python, worker_script, "--smiles", smiles],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            
+            if result.returncode != 0:
+                return {"error": f"ADMET Worker failed: {result.stderr}"}
+                
+            # Parse output - be resilient to non-JSON lines if they leaked
+            raw_output = result.stdout.strip()
+            try:
+                # Optimized for the typical case
+                return json.loads(raw_output)
+            except json.JSONDecodeError:
+                # Aggressive fallback: search lines for something JSON-looking
+                lines = raw_output.splitlines()
+                for line in reversed(lines):
+                    line = line.strip()
+                    if line.startswith("{") and line.endswith("}"):
+                        try:
+                            return json.loads(line)
+                        except: continue
+                return {"error": f"Invalid JSON from worker: {raw_output[:500]}..."}
+                
+        except Exception as e:
+            return {"error": f"Subprocess error: {str(e)}"}
 
 import uuid
 class RetroManager:
@@ -150,7 +207,7 @@ class RetroManager:
         # 2. Define Paths for this specific run
         run_id = str(uuid.uuid4())[:8]
         json_path = os.path.join(tempfile.gettempdir(), f"retro_{run_id}.json")
-        from config import DATA_DIR 
+        abs_data_dir = os.path.abspath(DATA_DIR)
         
         # 3. CONSTRUCT THE WORKER SCRIPT
         worker_code = f"""
@@ -165,11 +222,18 @@ except ImportError:
     print("CRITICAL: aizynthfinder not installed in this environment.")
     sys.exit(1)
 
+# Import RXNManager from our codebase if possible, or Mock it here to avoid complex path issues in sub-process
+# For simplicity in this worker script, we will just use a helper function or try to import if path allows.
+# Since this runs as a separate process, importing 'services.rxn_service' might be tricky without pythonpath.
+# We will inject the naming logic or a simple fallback here, OR make this process purely data extraction 
+# and do the naming in the main process (which has access to valid services).
+# BETTER APPROACH: Extract data here, Name in Main Process.
+
 CONFIG_FILE = r"{abs_config_path}"
 TARGET_SMILES = "{smiles}"
 OUTPUT_JSON = r"{json_path}"
-IMAGE_FOLDER = r"{IMG_DIR}"
 AIZYNTH_CLI = r"{AIZYNTH_CLI}"
+ABS_DATA_DIR = r"{abs_data_dir}"
 
 command = [
     AIZYNTH_CLI,
@@ -200,7 +264,7 @@ for i, route_dict in enumerate(routes[:5]):
     try:
         tree = ReactionTree.from_dict(route_dict)
         img_filename = f"retro_{run_id}_{{i}}.png"
-        img_path = os.path.join(r"{DATA_DIR}", img_filename) 
+        img_path = os.path.join(ABS_DATA_DIR, img_filename) 
         
         try:
             img = tree.to_image(in_stock_colors={{True: "#99ff99", False: "#ffcc99"}})
@@ -218,17 +282,31 @@ for i, route_dict in enumerate(routes[:5]):
                     rxn_reactants.append(mol[0].smiles)
                 else: rxn_reactants.append(str(mol))
             
+            # Construct reaction SMILES for naming
+            # simplistic: reactants>>products (we only have reactants here easily from tree traversal in this direction)
+            # AiZynthFinder keeps consistent direction.
+            # We'll just pass reactants string and let main process handle naming heuristic if needed.
+            
             steps.append({{
                 "reaction_smarts": getattr(reaction, "smarts", "N/A"),
                 "reactants": " + ".join(rxn_reactants),
-                # Add individual SMILES for rendering in UI
                 "reactant_smiles": [m.smiles if hasattr(m, "smiles") else str(m) for m in reaction.reactants]
             }})
+
+        # FIX SCORE: Check 'score' first (common in newer versions), then 'scores.state_score'
+        final_score = route_dict.get("score", 0)
+        if final_score == 0:
+             final_score = route_dict.get("scores", {{}}).get("state_score", 0)
 
         processed_routes.append({{
             "image": fname,
             "steps": steps,
-            "score": round(float(route_dict.get("scores", {{}}).get("state_score", 0)), 3)
+            "score": round(float(final_score), 4),
+            "scores": {{
+                "state score": round(float(final_score), 4),
+                "number of reactions": len(steps),
+                "number of pre-cursors": sum(1 for s in steps for m in s["reactant_smiles"])
+            }}
         }})
     except Exception as e:
         print(f"Error: {{e}}")
@@ -250,17 +328,31 @@ with open(OUTPUT_JSON, "w") as f:
                 cwd=BASE_DIR
             )
             
-            stdout, stderr = process.communicate()
+            stdout, stderr = process.communicate(timeout=300)
             if process.returncode != 0:
-                return {"error": "AiZynth process failed."}
+                errmsg = stderr.strip() if stderr.strip() else stdout.strip() or "Unknown error"
+                print(f"[RetroManager] AIZynth FAILED:\n{errmsg}", flush=True)
+                return {"error": f"AIZynth process failed: {errmsg[:800]}"}
 
             if os.path.exists(json_path):
                 with open(json_path, 'r') as f:
                     results = json.load(f)
                 
+                # Post-process with RXN Naming (in main process where imports work)
+                from services.rxn_service import RXNManager
+                rxn_mgr = RXNManager.get_instance()
+                
                 for route in results.get("routes", []):
                     if route.get("image"):
                         route["image_url"] = f"http://localhost:8000/static/{route['image']}"
+                    
+                    # Name steps and generate Mermaid
+                    for step in route.get("steps", []):
+                        reactants = step.get("reactants", "")
+                        step["reaction_name"] = rxn_mgr.get_reaction_name(reactants)
+                    
+                    # 🎨 VISUAL UPGRADE: Add Mermaid graph definition
+                    route["mermaid"] = rxn_mgr.generate_mermaid_route(route)
                 
                 return results
             return {"error": "No results generated"}

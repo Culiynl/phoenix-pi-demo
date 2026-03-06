@@ -5,28 +5,37 @@ import subprocess
 import requests
 import pandas as pd
 import json
-from config import PROTEIN_STORAGE, P2RANK_EXEC
+from config import PROTEIN_STORAGE, P2RANK_EXEC, PROJECTS_DIR
 import ctypes
 
 class PDBManager:
     # services/pdb_service.py update
     @staticmethod
-    def fetch_from_rcsb(pdb_id: str):
+    def fetch_from_rcsb(pdb_id: str, mission_id: str = None):
+        """Fetches and cleans a PDB from RCSB. Consolidates logic from bio_service."""
         pdb_id = pdb_id.upper()
-        formats = ['pdb', 'cif']
         
-        for fmt in formats:
-            url = f"https://files.rcsb.org/download/{pdb_id}.{fmt}"
-            target_path = os.path.join(PROTEIN_STORAGE, f"{pdb_id}.{fmt}")
-            
+        # Determine storage path
+        if mission_id:
+             storage_dir = os.path.join(PROJECTS_DIR, mission_id)
+        else:
+             storage_dir = PROTEIN_STORAGE
+        
+        os.makedirs(storage_dir, exist_ok=True)
+        
+        url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+        target_path = os.path.join(storage_dir, f"{pdb_id}.pdb")
+        
+        try:
             response = requests.get(url)
             if response.status_code == 200:
                 with open(target_path, "wb") as f:
                     f.write(response.content)
-                print(f"[PDB] Successfully downloaded {pdb_id} as {fmt}")
-                return {"filename": f"{pdb_id}.{fmt}", "format": fmt}
-                
-        print(f"[PDB] Error: {pdb_id} not found in PDB or CIF format.")
+                print(f"[PDB] Successfully downloaded {pdb_id}")
+                return {"filename": f"{pdb_id}.pdb", "path": target_path}
+        except Exception as e:
+            print(f"[PDB] Download Error: {e}")
+            
         return None
 
     # services/pdb_service.py

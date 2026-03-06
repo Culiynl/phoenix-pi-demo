@@ -1,0 +1,58 @@
+Building and Running the PHOENIX Project Locally
+Follow these steps to set up and run the project from scratch on your local machine.
+
+Prerequisites
+Python 3.9+
+Node.js (v18+ recommended)
+npm (comes with Node.js)
+1. Backend Setup
+Open a terminal and navigate to the backend directory:
+
+bash
+cd "f:\Coding Stuff\Full Model 2026 Fixed\webserver_stuff\backend"
+(Optional but recommended) Create and activate a Virtual Environment:
+
+bash
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+Install the Python dependencies:
+
+bash
+pip install -r requirements.txt
+Set up Environment Variables:
+
+Make sure you have your .env file in the backend directory with your API keys (e.g., GEMINI_API_KEY).
+Start the Backend Server:
+
+bash
+# Run the server on port 8000
+python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
+The backend API should now be running at http://localhost:8000.
+
+2. Frontend Setup
+Open a new terminal and navigate to the frontend directory:
+
+bash
+cd "f:\Coding Stuff\Full Model 2026 Fixed\webserver_stuff\frontend"
+Install the Node dependencies:
+
+bash
+npm install
+Make sure the .env file (if you use one) points to localhost:
+
+Create a .env file in the frontend folder containing:
+env
+REACT_APP_API_URL=http://localhost:8000
+Start the Frontend Development Server:
+
+bash
+npm run start
+# or
+npm start
+This will start your React application, usually at http://localhost:3000, and will open automatically in your browser.
+
+3. Ready to Go!
+You should now be able to use the website at http://localhost:3000, and it will securely communicate with your local backend at http://localhost:8000. All web requests, tools, and molecular rendering features are completely local.

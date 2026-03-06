@@ -20,8 +20,9 @@ const Projects = () => {
     if (!arxivQuery) return;
     setIsSearching(true);
     try {
+      // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
       const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${baseUrl}/api/research/arxiv?q=${arxivQuery}`);
+      const response = await fetch(`${baseUrl}/research/arxiv?q=${arxivQuery}`);
       const data = await response.json();
       setArxivResults(data.papers || []);
     } catch (err) {
@@ -49,8 +50,9 @@ const Projects = () => {
         research_mode: researchMode
       };
 
+      // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
       const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${baseUrl}/api/mission/start`, {
+      const response = await fetch(`${baseUrl}/mission/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -67,6 +69,17 @@ const Projects = () => {
     } catch (error) {
       console.error("Failed to start mission:", error);
       alert("Failed to start mission. Ensure backend is running.");
+    }
+  };
+
+  const handleDeleteProject = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) return;
+    try {
+      await api.deleteProject(id);
+      setProjects(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      alert("Failed to delete project: " + err.message);
     }
   };
 
@@ -150,14 +163,30 @@ const Projects = () => {
 
       <table className="mission-table">
         <thead>
-          <tr><th>Name</th><th>Owner</th><th>Created Date</th></tr>
+          <tr>
+            <th>Name</th>
+            <th>Owner</th>
+            <th>Created Date</th>
+            <th style={{ width: '50px' }}></th>
+          </tr>
         </thead>
         <tbody>
           {projects.map(p => (
             <tr key={p.id} onClick={() => navigate(`/dashboard/${p.id}`)}>
-              <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{p.name}</td>
+              <td style={{ color: 'var(--primary)', fontWeight: '600' }} title={p.name}>
+                {p.name && p.name.length > 30 ? p.name.substring(0, 30) + "..." : p.name}
+              </td>
               <td>{p.owner}</td>
               <td>{p.date}</td>
+              <td>
+                <button
+                  className="delete-btn"
+                  onClick={(e) => handleDeleteProject(e, p.id)}
+                  title="Delete Project"
+                >
+                  <i className="trash-icon">🗑️</i>
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -228,11 +257,14 @@ const Projects = () => {
             transition: all 0.2s;
         }
         .mode-btn.active {
-            background: #222;
-            color: #4285F4;
+            background: rgba(153, 27, 27, 0.2);
+            color: #f87171;
+            border: 1px solid #991b1b;
+            box-shadow: 0 0 8px rgba(153, 27, 27, 0.3);
         }
         .mode-btn:hover:not(.active) {
-            color: #888;
+            color: #ccc;
+            background: #111;
         }
         .name-input {
             flex-grow: 1;
@@ -243,13 +275,28 @@ const Projects = () => {
             border-radius: 6px;
         }
         .launch-btn {
-            background: #4285F4;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
             color: #fff;
-            padding: 0 20px;
-            box-shadow: 0 0 15px rgba(66, 133, 244, 0.4);
-            border: none;
+            padding: 0 24px;
+            min-height: 42px;
+            border-radius: 8px;
+            box-shadow: 0 0 18px rgba(153, 27, 27, 0.45), 0 2px 8px rgba(0,0,0,0.4);
+            border: 1px solid #7f1d1d;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 800;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+        }
+        .launch-btn:hover {
+            background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+            box-shadow: 0 0 28px rgba(153, 27, 27, 0.65), 0 4px 16px rgba(0,0,0,0.5);
+            transform: translateY(-2px);
+        }
+        .launch-btn:active {
+            transform: translateY(0px);
         }
         .search-box {
             display: flex;
@@ -299,6 +346,21 @@ const Projects = () => {
         }
         .mission-table tr { cursor: pointer; transition: background 0.2s; }
         .mission-table tr:hover { background: #111; }
+        
+        .delete-btn {
+          background: transparent;
+          border: none;
+          color: #ff4444;
+          cursor: pointer;
+          opacity: 0.5;
+          transition: opacity 0.2s;
+          font-size: 16px;
+          padding: 5px;
+        }
+        .delete-btn:hover {
+          opacity: 1;
+        }
+        .trash-icon { font-style: normal; }
       `}</style>
     </div>
   );

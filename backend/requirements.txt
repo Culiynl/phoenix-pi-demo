@@ -1,10 +1,11 @@
 fastapi
-uvicorn
+uvicorn[standard]
+python-multipart
+websockets
 biopython
 chembl_webresource_client
 google-generativeai
 requests
-firebase-admin
 rdkit-pypi
 torch
 numpy

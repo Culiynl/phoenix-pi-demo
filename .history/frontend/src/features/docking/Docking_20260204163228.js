@@ -11,17 +11,17 @@ const Docking = () => {
     const navigate = useNavigate();
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    
+
     // UI & Search State
     const [pdbSearch, setPdbSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(false);
-    
+
     // Pocket & Docking Center State
     const [pockets, setPockets] = useState([]);
     const [dockingCenter, setDockingCenter] = useState(null); // {x, y, z} from P2Rank
-    
+
     // Vina State
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [poses, setPoses] = useState([]);
@@ -49,7 +49,7 @@ const Docking = () => {
         if (!pdbSearch) return;
         setIsSearching(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
+            const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
             const data = await res.json();
             setSearchResults(data || []);
         } catch (e) { alert("Search failed."); }
@@ -59,7 +59,7 @@ const Docking = () => {
     const handleImport = async (pdbId) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/pdb/fetch/${pdbId.toUpperCase()}`);
+            const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/pdb/fetch/${pdbId.toUpperCase()}`);
             if (res.status === 404) throw new Error("PDB not found on RCSB");
             const data = await res.json();
             alert(`Structure ${pdbId} added. Run P2Rank now.`);
@@ -88,7 +88,7 @@ const Docking = () => {
     const loadPdbIntoViewer = async (url) => {
         if (!pluginRef.current) return;
         await pluginRef.current.clear();
-        const data = await pluginRef.current.builders.data.download({ url: `http://localhost:8000${url}` });
+        const data = await pluginRef.current.builders.data.download({ url: `http://https://g5gd0v28-8000.usw3.devtunnels.ms${url}` });
         const trajectory = await pluginRef.current.builders.structure.parseTrajectory(data, 'pdb');
         await pluginRef.current.builders.structure.hierarchy.applyPreset(trajectory, 'default');
     };
@@ -98,11 +98,11 @@ const Docking = () => {
         setLoading(true);
         const filename = `${pdbSearch.toUpperCase()}.pdb`;
         try {
-            await fetch(`http://localhost:8000/api/p2rank/run?pdb_filename=${filename}&project_id=${projectId}`, { method: 'POST' });
-            
+            await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/p2rank/run?pdb_filename=${filename}&project_id=${projectId}`, { method: 'POST' });
+
             // Poll for results
             const poll = setInterval(async () => {
-                const res = await fetch(`http://localhost:8000/api/p2rank/results?pdb_filename=${filename}&project_id=${projectId}`);
+                const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/p2rank/results?pdb_filename=${filename}&project_id=${projectId}`);
                 if (res.ok) {
                     const data = await res.json();
                     setPockets(data);
@@ -137,11 +137,11 @@ const Docking = () => {
     const handleRunDocking = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8000/api/docking/run', {
+            const response = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    project_id: String(projectId), 
+                body: JSON.stringify({
+                    project_id: String(projectId),
                     smiles: smiles.trim(),
                     center_override: dockingCenter // Pass the P2Rank center to the backend
                 })
@@ -160,7 +160,7 @@ const Docking = () => {
     const loadStructure = async (receptorUrl, ligandUrl, poseIndex) => {
         const plugin = pluginRef.current;
         await plugin.clear();
-        const baseUrl = 'http://localhost:8000';
+        const baseUrl = 'http://https://g5gd0v28-8000.usw3.devtunnels.ms';
         const recData = await plugin.builders.data.download({ url: `${baseUrl}${receptorUrl}` });
         const recTraj = await plugin.builders.structure.parseTrajectory(recData, 'pdb');
         const recStruct = await plugin.builders.structure.createStructure(await plugin.builders.structure.createModel(recTraj));
@@ -190,19 +190,19 @@ const Docking = () => {
                             <button className="primary-btn" onClick={handlePdbSearch}>Search</button>
                             <button className="primary-btn" onClick={handleRunP2Rank} disabled={!pdbSearch || loading}>Run P2Rank</button>
                         </div>
-                        
+
                         {searchResults.length > 0 && (
-                            <div className="technical-table-container" style={{marginTop: '15px', maxHeight: '250px'}}>
+                            <div className="technical-table-container" style={{ marginTop: '15px', maxHeight: '250px' }}>
                                 <table className="technical-table">
                                     <thead><tr><th>ID</th><th>Description</th><th>Actions</th></tr></thead>
                                     <tbody>
                                         {searchResults.map(r => (
                                             <tr key={r.id}>
                                                 <td>{r.id}</td>
-                                                <td style={{fontSize: '0.75rem'}}>{r.title}</td>
+                                                <td style={{ fontSize: '0.75rem' }}>{r.title}</td>
                                                 <td>
                                                     <button className="primary-btn" onClick={() => handlePreview(r.id)}>Preview</button>
-                                                    <button className="primary-btn" style={{background: '#4ade80', color: '#000'}} onClick={() => handleImport(r.id)}>Import</button>
+                                                    <button className="primary-btn" style={{ background: '#4ade80', color: '#000' }} onClick={() => handleImport(r.id)}>Import</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -220,10 +220,10 @@ const Docking = () => {
                                 <thead><tr><th>Rank</th><th>Score</th><th>Center (X,Y,Z)</th><th>Actions</th></tr></thead>
                                 <tbody>
                                     {pockets.map(p => (
-                                        <tr key={p.rank} style={{background: p.rank === 1 ? '#1a1a1a' : 'transparent'}}>
+                                        <tr key={p.rank} style={{ background: p.rank === 1 ? '#1a1a1a' : 'transparent' }}>
                                             <td>#{p.rank} {p.rank === 1 && "(Target)"}</td>
                                             <td>{p.score}</td>
-                                            <td style={{fontSize: '0.7rem'}}>{p.center_x}, {p.center_y}, {p.center_z}</td>
+                                            <td style={{ fontSize: '0.7rem' }}>{p.center_x}, {p.center_y}, {p.center_z}</td>
                                             <td><button className="primary-btn" onClick={() => highlightPocket(p.residue_ids)}>Focus</button></td>
                                         </tr>
                                     ))}
@@ -235,13 +235,13 @@ const Docking = () => {
                     {/* Vina Controls */}
                     <div className="card">
                         <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>VINA DOCKING</h3>
-                        {dockingCenter && <div style={{fontSize: '0.7rem', color: '#4ade80', marginBottom: '10px'}}>✓ Using P2Rank Center</div>}
-                        <textarea className="technical-input" value={smiles} onChange={(e) => setSmiles(e.target.value)} style={{height: '80px', marginBottom: '15px'}} />
-                        <button className="primary-btn" style={{width: '100%'}} onClick={handleRunDocking} disabled={loading}>Run Docking</button>
-                        
+                        {dockingCenter && <div style={{ fontSize: '0.7rem', color: '#4ade80', marginBottom: '10px' }}>✓ Using P2Rank Center</div>}
+                        <textarea className="technical-input" value={smiles} onChange={(e) => setSmiles(e.target.value)} style={{ height: '80px', marginBottom: '15px' }} />
+                        <button className="primary-btn" style={{ width: '100%' }} onClick={handleRunDocking} disabled={loading}>Run Docking</button>
+
                         {poses.map(p => (
                             <div key={p.id} className={`pose-row ${activePose === p.id ? 'active' : ''}`} onClick={() => { setActivePose(p.id); loadStructure(lastResultUrls.receptor_url, lastResultUrls.ligand_url, p.id); }}>
-                                <span>Pose #{p.id+1}</span><span className="pose-energy">{p.energy}</span>
+                                <span>Pose #{p.id + 1}</span><span className="pose-energy">{p.energy}</span>
                             </div>
                         ))}
                     </div>

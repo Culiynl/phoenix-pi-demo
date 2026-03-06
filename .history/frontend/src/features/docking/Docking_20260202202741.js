@@ -10,11 +10,11 @@ const Docking = () => {
     const navigate = useNavigate();
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    
+
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [loading, setLoading] = useState(false);
     const [isPluginReady, setIsPluginReady] = useState(false);
-    
+
     const [poses, setPoses] = useState([]);
     const [activePose, setActivePose] = useState(0);
     const [lastResultUrl, setLastResultUrl] = useState(null);
@@ -41,7 +41,7 @@ const Docking = () => {
             const ctx = await createPluginUI({
                 target: parentRef.current,
                 spec: spec,
-                render: renderReact18 
+                render: renderReact18
             });
             pluginRef.current = ctx;
             setIsPluginReady(true);
@@ -52,28 +52,28 @@ const Docking = () => {
     const loadStructure = async (receptorUrl, ligandUrl, poseIndex) => {
         if (!pluginRef.current) return;
         const plugin = pluginRef.current;
-        
+
         // Clear previous view
         await plugin.clear();
 
-        const baseUrl = 'http://localhost:8000';
-        
+        const baseUrl = 'http://https://g5gd0v28-8000.usw3.devtunnels.ms';
+
         try {
             // --- 1. LOAD RECEPTOR (The Protein) ---
             const recData = await plugin.builders.data.download({ url: `${baseUrl}${receptorUrl}` });
             const recTraj = await plugin.builders.structure.parseTrajectory(recData, 'pdb');
             const recModel = await plugin.builders.structure.createModel(recTraj);
             const recStruct = await plugin.builders.structure.createStructure(recModel);
-            
+
             // Show protein as Cartoon
             await plugin.builders.structure.representation.addRepresentation(recStruct, {
-                type: 'cartoon', color: 'uniform', colorParams: { value: 0x3b82f6 } 
+                type: 'cartoon', color: 'uniform', colorParams: { value: 0x3b82f6 }
             });
 
             // --- 2. LOAD LIGAND POSE ---
             const ligData = await plugin.builders.data.download({ url: `${baseUrl}${ligandUrl}` });
             const ligTraj = await plugin.builders.structure.parseTrajectory(ligData, 'pdb');
-            
+
             // Isolate the specific MODEL from the PDB file
             const ligModel = await plugin.builders.structure.createModel(ligTraj, { modelIndex: poseIndex });
             const ligStruct = await plugin.builders.structure.createStructure(ligModel);
@@ -95,7 +95,7 @@ const Docking = () => {
     const handleRunDocking = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8000/api/docking/run', {
+            const response = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ project_id: String(projectId), smiles: smiles.trim() })
@@ -104,7 +104,7 @@ const Docking = () => {
             const data = await response.json();
             if (data.success) {
                 setLastResultUrl(data); // Store the whole data object containing both URLs
-                
+
                 const generatedPoses = [
                     { id: 0, energy: data.score.toFixed(3) },
                     { id: 1, energy: (data.score + 0.35).toFixed(3) },
@@ -114,7 +114,7 @@ const Docking = () => {
                 ];
                 setPoses(generatedPoses);
                 setActivePose(0);
-                
+
                 // Initial load
                 loadStructure(data.receptor_url, data.ligand_url, 0);
             }
@@ -132,28 +132,28 @@ const Docking = () => {
     return (
         <div className="main-content">
             <div className="docking-container-wrapper">
-                
+
                 <div className="docking-header">
                     <button className="primary-btn" onClick={() => navigate(`/dashboard/${projectId}`)}>
                         ← Back to Dashboard
                     </button>
                     <h2 style={{ margin: 0 }}>Molecular Docking: {projectId}</h2>
-                    <div style={{ width: '130px' }} /> 
+                    <div style={{ width: '130px' }} />
                 </div>
 
                 <div className="docking-grid">
                     {/* Controls */}
                     <div className="card" style={{ margin: 0, padding: '24px' }}>
                         <h3 style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '15px' }}>CONTROLS</h3>
-                        
+
                         <div style={{ background: '#111', padding: '12px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #222' }}>
                             <div style={{ color: '#4ade80', fontSize: '0.8rem' }}>• 3D Engine: Ready</div>
                             <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>• Project ID: {projectId}</div>
                         </div>
 
                         <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '5px' }}>LIGAND (SMILES)</label>
-                        <textarea 
-                            className="technical-input" 
+                        <textarea
+                            className="technical-input"
                             style={{ background: '#000', border: '1px solid var(--border)', color: 'white', padding: '12px', borderRadius: '6px', resize: 'none', height: '80px', marginBottom: '15px', width: '100%', boxSizing: 'border-box' }}
                             value={smiles}
                             onChange={(e) => setSmiles(e.target.value)}
@@ -168,8 +168,8 @@ const Docking = () => {
                                 <h3 style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '10px' }}>DOCKING POSES</h3>
                                 <div className="pose-table-container">
                                     {poses.map((p) => (
-                                        <div 
-                                            key={p.id} 
+                                        <div
+                                            key={p.id}
                                             className={`pose-row ${activePose === p.id ? 'active' : ''}`}
                                             onClick={() => selectPose(p.id)}
                                         >

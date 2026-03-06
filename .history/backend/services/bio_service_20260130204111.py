@@ -173,7 +173,7 @@ print("Done.")
                 for i, route in enumerate(routes[:5]):
                     img_name = f"retro_{i}_{base_name}.png"
                     # Add a field for the API to serve
-                    route['image_url'] = f"http://localhost:8000/static/{img_name}"
+                    route['image_url'] = f"http://https://g5gd0v28-8000.usw3.devtunnels.ms/static/{img_name}"
 
                 return results
             else:

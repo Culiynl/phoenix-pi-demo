@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 const FeudalOptimization = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
-    
+
     // State
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ const FeudalOptimization = () => {
     const runOptimization = async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/feudal/optimize', {
+            const res = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/feudal/optimize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ project_id: projectId, smiles: smiles })
@@ -33,7 +33,7 @@ const FeudalOptimization = () => {
 
     const calculateWinner = async (overrideHistory) => {
         try {
-            const res = await fetch('http://localhost:8000/api/feudal/pareto-rank', {
+            const res = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/feudal/pareto-rank', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ project_id: projectId, weights: weights })
@@ -48,7 +48,7 @@ const FeudalOptimization = () => {
     return (
         <div className="main-content">
             <div className="docking-container-wrapper" style={{ transform: 'translateX(-40px)' }}>
-                
+
                 <div className="docking-header">
                     <button className="primary-btn" onClick={() => navigate(`/dashboard/${projectId}`)}>
                         ← Back
@@ -61,11 +61,11 @@ const FeudalOptimization = () => {
                     {/* LEFT PANEL: INPUT & WEIGHTS */}
                     <div className="card" style={{ margin: 0, padding: '24px', display: 'flex', flexDirection: 'column' }}>
                         <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '15px' }}>GENERATIVE SETTINGS</h3>
-                        
+
                         <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>INITIAL LEAD (SMILES)</label>
-                        <input 
-                            type="text" 
-                            className="technical-input" 
+                        <input
+                            type="text"
+                            className="technical-input"
                             style={{ marginBottom: '20px', marginTop: '5px' }}
                             value={smiles}
                             onChange={(e) => setSmiles(e.target.value)}
@@ -79,24 +79,24 @@ const FeudalOptimization = () => {
                                         <span style={{ textTransform: 'uppercase' }}>{key}</span>
                                         <span>{weights[key]}</span>
                                     </div>
-                                    <input 
-                                        type="range" min="0" max="2" step="0.1" 
+                                    <input
+                                        type="range" min="0" max="2" step="0.1"
                                         style={{ width: '100%' }}
-                                        value={weights[key]} 
-                                        onChange={(e) => setWeights({...weights, [key]: parseFloat(e.target.value)})}
+                                        value={weights[key]}
+                                        onChange={(e) => setWeights({ ...weights, [key]: parseFloat(e.target.value) })}
                                     />
                                 </div>
                             ))}
                         </div>
 
-                        <button className="primary-btn" style={{ width: '100%', background: 'var(--primary)', color: 'white', border: 'none' }} 
-                                onClick={runOptimization} disabled={loading}>
+                        <button className="primary-btn" style={{ width: '100%', background: 'var(--primary)', color: 'white', border: 'none' }}
+                            onClick={runOptimization} disabled={loading}>
                             {loading ? "Optimizing (Running Vina)..." : "Start Feudal Loop"}
                         </button>
-                        
+
                         {history?.length > 0 && (
-                            <button className="primary-btn" style={{ width: '100%', marginTop: '10px' }} 
-                                    onClick={() => calculateWinner()}>
+                            <button className="primary-btn" style={{ width: '100%', marginTop: '10px' }}
+                                onClick={() => calculateWinner()}>
                                 Recalculate Pareto Winner
                             </button>
                         )}
@@ -104,7 +104,7 @@ const FeudalOptimization = () => {
 
                     {/* RIGHT PANEL: VISUALIZATION */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        
+
                         {/* 1. Trajectory Graph */}
                         <div className="card" style={{ margin: 0, height: '350px' }}>
                             <h3 style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '15px' }}>BINDING AFFINITY TRAJECTORY</h3>
@@ -126,7 +126,7 @@ const FeudalOptimization = () => {
                                 <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
                                     <div className="stats-placeholder" style={{ width: '250px', height: '250px', background: '#fff' }}>
                                         {/* You can replace this with an <img> calling an RDKit rendering endpoint */}
-                                        <span style={{color: '#000'}}>Structure: {winner.smiles.substring(0,10)}...</span>
+                                        <span style={{ color: '#000' }}>Structure: {winner.smiles.substring(0, 10)}...</span>
                                     </div>
                                     <div className="winner-stats">
                                         <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4ade80', marginBottom: '10px' }}>
@@ -136,8 +136,8 @@ const FeudalOptimization = () => {
                                             <div>QED Score: {winner.qed}</div>
                                             <div>SA Score: {winner.sa}</div>
                                             <div>Step Identified: {winner.step}</div>
-                                            <div style={{marginTop: '10px', color: 'var(--primary)'}}>SMILES:</div>
-                                            <div style={{fontSize: '0.7rem', wordBreak: 'break-all'}}>{winner.smiles}</div>
+                                            <div style={{ marginTop: '10px', color: 'var(--primary)' }}>SMILES:</div>
+                                            <div style={{ fontSize: '0.7rem', wordBreak: 'break-all' }}>{winner.smiles}</div>
                                         </div>
                                     </div>
                                 </div>

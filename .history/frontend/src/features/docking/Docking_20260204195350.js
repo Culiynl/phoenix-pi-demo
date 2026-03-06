@@ -11,17 +11,17 @@ const Docking = () => {
     const navigate = useNavigate();
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    
+
     // --- State: Search & Import ---
     const [pdbSearch, setPdbSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [loading, setLoading] = useState(false);
-    
+
     // --- State: P2Rank & Pockets ---
     const [pockets, setPockets] = useState([]);
     const [dockingCenter, setDockingCenter] = useState(null); // Calculated from P2Rank
-    
+
     // --- State: Vina Docking ---
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [poses, setPoses] = useState([]);
@@ -40,24 +40,24 @@ const Docking = () => {
         setLoading(true);
         setPockets([]);
         setP2rankLogs([{ msg: "Initializing P2Rank process...", type: "info" }]);
-        
-        const filename = pdbSearch; 
+
+        const filename = pdbSearch;
 
         try {
-            await fetch(`http://localhost:8000/api/p2rank/run?pdb_filename=${filename}&project_id=${projectId}`, { 
-                method: 'POST' 
+            await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/p2rank/run?pdb_filename=${filename}&project_id=${projectId}`, {
+                method: 'POST'
             });
 
             // POLLING LOOP
             const pollInterval = setInterval(async () => {
                 try {
                     // 1. Fetch Logs
-                    const logRes = await fetch(`http://localhost:8000/api/p2rank/status/${projectId}`);
+                    const logRes = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/p2rank/status/${projectId}`);
                     const logs = await logRes.json();
                     setP2rankLogs(logs);
 
                     // 2. Try fetching results
-                    const res = await fetch(`http://localhost:8000/api/p2rank/results?pdb_filename=${filename}&project_id=${projectId}`);
+                    const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/p2rank/results?pdb_filename=${filename}&project_id=${projectId}`);
                     if (res.status === 200) {
                         const data = await res.json();
                         setPockets(data);
@@ -68,7 +68,7 @@ const Docking = () => {
                         clearInterval(pollInterval);
                         setLoading(false);
                     }
-                    
+
                     // Stop if we see "complete" or "failed" in logs
                     const lastLog = logs[logs.length - 1]?.msg.toLowerCase();
                     if (lastLog?.includes("complete") || lastLog?.includes("failed")) {
@@ -78,8 +78,8 @@ const Docking = () => {
                 } catch (err) { console.log("Polling logs..."); }
             }, 2000);
 
-        } catch (e) { 
-            setLoading(false); 
+        } catch (e) {
+            setLoading(false);
             alert("Server error starting P2Rank.");
         }
     };
@@ -106,7 +106,7 @@ const Docking = () => {
                 const ctx = await createPluginUI({
                     target: parentRef.current,
                     spec: spec,
-                    render: renderReact18 
+                    render: renderReact18
                 });
                 pluginRef.current = ctx;
                 setIsPluginReady(true);
@@ -123,7 +123,7 @@ const Docking = () => {
         if (!pdbSearch) return;
         setIsSearching(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
+            const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/pdb/search?q=${encodeURIComponent(pdbSearch)}`);
             const data = await res.json();
             setSearchResults(data || []);
         } catch (e) { alert("Search failed."); }
@@ -138,12 +138,12 @@ const Docking = () => {
     const handleImport = async (pdbId) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/pdb/fetch/${pdbId.toUpperCase()}`);
+            const res = await fetch(`http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/pdb/fetch/${pdbId.toUpperCase()}`);
             if (!res.ok) throw new Error("Structure not found");
-            
+
             const data = await res.json();
             // data.filename is "9BA8.cif"
-            setPdbSearch(data.filename); 
+            setPdbSearch(data.filename);
             alert(`Imported ${data.filename}`);
             loadPdbIntoViewer(`/static/proteins/${data.filename}`);
         } catch (e) {
@@ -157,7 +157,7 @@ const Docking = () => {
         if (!pluginRef.current) return;
         const plugin = pluginRef.current;
         const format = getFormat(url); // Dynamically detect format
-        
+
         try {
             await plugin.clear();
             const data = await plugin.builders.data.download({ url }, { state: { isGhost: true } });
@@ -173,10 +173,10 @@ const Docking = () => {
         if (!pluginRef.current) return;
         const plugin = pluginRef.current;
         const format = getFormat(relativeUrl);
-        
+
         try {
             await plugin.clear();
-            const data = await plugin.builders.data.download({ url: `http://localhost:8000${relativeUrl}` });
+            const data = await plugin.builders.data.download({ url: `http://https://g5gd0v28-8000.usw3.devtunnels.ms${relativeUrl}` });
             const trajectory = await plugin.builders.structure.parseTrajectory(data, format);
             await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
         } catch (e) {
@@ -206,13 +206,13 @@ const Docking = () => {
     const handleRunDocking = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8000/api/docking/run', {
+            const response = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    project_id: String(projectId), 
+                body: JSON.stringify({
+                    project_id: String(projectId),
                     smiles: smiles.trim(),
-                    center_override: dockingCenter 
+                    center_override: dockingCenter
                 })
             });
             const data = await response.json();
@@ -229,8 +229,8 @@ const Docking = () => {
     const loadComplex = async (recUrl, ligUrl, idx) => {
         const plugin = pluginRef.current;
         await plugin.clear();
-        const baseUrl = 'http://localhost:8000';
-        
+        const baseUrl = 'http://https://g5gd0v28-8000.usw3.devtunnels.ms';
+
         const recData = await plugin.builders.data.download({ url: `${baseUrl}${recUrl}` });
         const recStruct = await plugin.builders.structure.createStructure(await plugin.builders.structure.createModel(await plugin.builders.structure.parseTrajectory(recData, 'pdb')));
         await plugin.builders.structure.representation.addRepresentation(recStruct, { type: 'cartoon', color: 'uniform', colorParams: { value: 0x3b82f6 } });
@@ -238,14 +238,14 @@ const Docking = () => {
         const ligData = await plugin.builders.data.download({ url: `${baseUrl}${ligUrl}` });
         const ligStruct = await plugin.builders.structure.createStructure(await plugin.builders.structure.createModel(await plugin.builders.structure.parseTrajectory(ligData, 'pdb'), { modelIndex: idx }));
         await plugin.builders.structure.representation.addRepresentation(ligStruct, { type: 'ball-and-stick', color: 'element-symbol' });
-        
+
         plugin.managers.camera.reset();
     };
 
     return (
         <div className="main-content">
             <div className="docking-container-wrapper">
-                
+
                 {/* Header */}
                 <div className="docking-header" style={{ justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -263,13 +263,13 @@ const Docking = () => {
                 <div className="card">
                     <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '15px' }}>RCSB PDB DATABASE & POCKET DETECTION</h3>
                     <div className="action-group" style={{ marginBottom: '20px' }}>
-                        <input 
-                            type="text" 
-                            placeholder="Search keyword or ID (e.g. Alzheimer's, 6OD6)" 
-                            className="technical-input" 
-                            value={pdbSearch} 
-                            onChange={(e) => setPdbSearch(e.target.value)} 
-                            onKeyDown={(e) => e.key === 'Enter' && handlePdbSearch()} 
+                        <input
+                            type="text"
+                            placeholder="Search keyword or ID (e.g. Alzheimer's, 6OD6)"
+                            className="technical-input"
+                            value={pdbSearch}
+                            onChange={(e) => setPdbSearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handlePdbSearch()}
                         />
                         <button className="primary-btn" style={{ background: 'var(--primary)', color: 'white' }} onClick={handlePdbSearch}>Search PDB</button>
                         <button className="primary-btn" onClick={handleRunP2Rank} disabled={loading || !pdbSearch}>
@@ -316,7 +316,7 @@ const Docking = () => {
                                             <td>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button className="primary-btn" onClick={() => highlightPocket(p.residue_ids)}>Focus</button>
-                                                    <button className="primary-btn" style={{ background: '#fff', color: '#000' }} 
+                                                    <button className="primary-btn" style={{ background: '#fff', color: '#000' }}
                                                         onClick={() => setDockingCenter({ x: p.center_x, y: p.center_y, z: p.center_z })}>
                                                         Target
                                                     </button>
@@ -346,23 +346,23 @@ const Docking = () => {
 
                 {/* Main Docking Grid (Controls + Mol*) */}
                 <div className="docking-grid">
-                    
+
                     {/* Vina Controls Card */}
                     <div className="card" style={{ height: '100%', padding: '24px' }}>
                         <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '15px' }}>DOCKING EXECUTION</h3>
-                        
+
                         <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>LIGAND (SMILES)</label>
-                        <textarea 
-                            className="technical-input" 
+                        <textarea
+                            className="technical-input"
                             style={{ background: '#000', border: '1px solid var(--border)', color: 'white', padding: '12px', borderRadius: '6px', height: '100px', marginBottom: '20px', resize: 'none', fontFamily: 'monospace' }}
-                            value={smiles} 
-                            onChange={(e) => setSmiles(e.target.value)} 
+                            value={smiles}
+                            onChange={(e) => setSmiles(e.target.value)}
                         />
 
-                        <button 
-                            className="primary-btn" 
-                            style={{ width: '100%', padding: '15px', background: dockingCenter ? 'var(--primary)' : '#333', color: 'white' }} 
-                            onClick={handleRunDocking} 
+                        <button
+                            className="primary-btn"
+                            style={{ width: '100%', padding: '15px', background: dockingCenter ? 'var(--primary)' : '#333', color: 'white' }}
+                            onClick={handleRunDocking}
                             disabled={loading || !dockingCenter}
                         >
                             {loading ? "Running Simulation..." : "Start Auto-Centered Docking"}
@@ -372,28 +372,28 @@ const Docking = () => {
                         {/* Docking Poses List */}
                         {poses.length > 0 && (
                             <div style={{ marginTop: '30px', flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '10px' }}>DOCKING POSES</h3>
-                            <div className="pose-table-container">
-                                {poses.map((p) => (
-                                    <div key={p.id} className={`pose-row ${activePose === p.id ? 'active' : ''}`} 
-                                        onClick={() => { setActivePose(p.id); loadComplex(lastResultUrls.receptor_url, lastResultUrls.ligand_url, p.id); }}>
-                                        <span className="pose-label">#{p.id + 1}</span>
-                                        <span>Binding Energy</span>
-                                        <span className="pose-energy">{p.energy}</span>
-                                    </div>
-                                ))}
+                                <h3 style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '10px' }}>DOCKING POSES</h3>
+                                <div className="pose-table-container">
+                                    {poses.map((p) => (
+                                        <div key={p.id} className={`pose-row ${activePose === p.id ? 'active' : ''}`}
+                                            onClick={() => { setActivePose(p.id); loadComplex(lastResultUrls.receptor_url, lastResultUrls.ligand_url, p.id); }}>
+                                            <span className="pose-label">#{p.id + 1}</span>
+                                            <span>Binding Energy</span>
+                                            <span className="pose-energy">{p.energy}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
+
+                    {/* Mol* Viewer Card */}
+                    <div className="molstar-container" ref={parentRef} />
+
                 </div>
-
-                {/* Mol* Viewer Card */}
-                <div className="molstar-container" ref={parentRef} />
-
             </div>
         </div>
-    </div>
-);
+    );
 };
 
 export default Docking;

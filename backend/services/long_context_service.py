@@ -27,7 +27,7 @@ class LongContextAnalyzer:
         Returns:
             dict: Comprehensive synthesis across all papers
         """
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         try:
             # Fetch paper abstracts and metadata
@@ -88,8 +88,8 @@ Format your response with clear section headers and bullet points."""
             
             synthesis_text = response.text
             
-            # Save to Firestore
-            from services.firebase_service import update_mission_field
+            # Save to Local Storage
+            from services.local_storage_service import update_mission_field
             from datetime import datetime
             
             update_mission_field(mission_id, "deep_synthesis", {
@@ -122,7 +122,7 @@ Format your response with clear section headers and bullet points."""
         Returns:
             dict: Comprehensive SAR insights
         """
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         try:
             from services.bio_service import BioDataManager
@@ -176,8 +176,8 @@ Format your response with clear sections and specific examples (use SMILES when 
             
             sar_analysis = response.text
             
-            # Save to Firestore
-            from services.firebase_service import update_mission_field
+            # Save to Local Storage
+            from services.local_storage_service import update_mission_field
             from datetime import datetime
             
             update_mission_field(mission_id, "full_chembl_analysis", {

@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'http://https://g5gd0v28-8000.usw3.devtunnels.ms/api';
 
 export const api = {
   // Mock projects for now - match your "Guest" user logic

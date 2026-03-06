@@ -12,8 +12,9 @@ const LiteratureReview = () => {
         setLoading(true);
         setSummary(''); // Clear previous summary
         try {
+            // const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${baseUrl}/api/research/arxiv?q=${encodeURIComponent(query)}`);
+            const res = await fetch(`${baseUrl}/research/arxiv?q=${encodeURIComponent(query)}`);
             if (!res.ok) throw new Error("Search failed");
             const data = await res.json();
             setPapers(data.papers || []);
@@ -30,7 +31,7 @@ const LiteratureReview = () => {
         setSynthesizing(true);
         try {
             const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-            const res = await fetch(`${baseUrl}/api/research/synthesize`, {
+            const res = await fetch(`${baseUrl}/research/synthesize`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ papers })

@@ -5,7 +5,7 @@ const ToolsPage = () => {
     return (
         <div className="tools-page">
             <div className="page-header">
-                <h1>🔬 Research Tools</h1>
+                <h1>Research Tools</h1>
                 <p>Standalone computational chemistry tools for quick analysis</p>
             </div>
 

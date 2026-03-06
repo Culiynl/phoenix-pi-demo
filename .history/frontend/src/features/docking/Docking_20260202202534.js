@@ -10,11 +10,11 @@ const Docking = () => {
     const navigate = useNavigate();
     const parentRef = useRef(null);
     const pluginRef = useRef(null);
-    
+
     const [smiles, setSmiles] = useState("CC(C)CC1=CC=C(C=C1)C(C)C(=O)O");
     const [loading, setLoading] = useState(false);
     const [isPluginReady, setIsPluginReady] = useState(false);
-    
+
     const [poses, setPoses] = useState([]);
     const [activePose, setActivePose] = useState(0);
     const [lastResultUrl, setLastResultUrl] = useState(null);
@@ -41,7 +41,7 @@ const Docking = () => {
             const ctx = await createPluginUI({
                 target: parentRef.current,
                 spec: spec,
-                render: renderReact18 
+                render: renderReact18
             });
             pluginRef.current = ctx;
             setIsPluginReady(true);
@@ -56,12 +56,12 @@ const Docking = () => {
         setLoading(true);
         try {
             // FIX: Ensure project_id is a string and matches your backend schema
-            const payload = { 
-                project_id: String(projectId), 
-                smiles: smiles.trim() 
+            const payload = {
+                project_id: String(projectId),
+                smiles: smiles.trim()
             };
 
-            const response = await fetch('http://localhost:8000/api/docking/run', {
+            const response = await fetch('http://https://g5gd0v28-8000.usw3.devtunnels.ms/api/docking/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -73,10 +73,10 @@ const Docking = () => {
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 setLastResultUrl(data.file_url);
-                
+
                 // Vina usually returns ~9 poses. 
                 // We generate the list based on the main score
                 const baseScore = data.score;
@@ -87,14 +87,14 @@ const Docking = () => {
                     { id: 3, energy: (baseScore + 1.121).toFixed(3) },
                     { id: 4, energy: (baseScore + 1.458).toFixed(3) },
                 ];
-                
+
                 setPoses(generatedPoses);
                 setActivePose(0);
                 loadStructure(data.file_url, 0);
             }
-        } catch (e) { 
+        } catch (e) {
             console.error("Docking Error:", e);
-            alert("Docking Failed: " + e.message); 
+            alert("Docking Failed: " + e.message);
         }
         setLoading(false);
     };
@@ -102,29 +102,29 @@ const Docking = () => {
     const loadStructure = async (url, poseIndex) => {
         if (!pluginRef.current) return;
         const plugin = pluginRef.current;
-        
+
         // 1. Clear previous view
         await plugin.clear();
 
-        const fullUrl = `http://localhost:8000${url}`;
-        
+        const fullUrl = `http://https://g5gd0v28-8000.usw3.devtunnels.ms${url}`;
+
         try {
             // 2. Download Data
             const data = await plugin.builders.data.download({ url: fullUrl });
-            
+
             // 3. Parse Trajectory
             const trajectory = await plugin.builders.structure.parseTrajectory(data, 'pdb');
-            
+
             // 4. Create Model specifically for the chosen index
             // This is the "magic" that isolates the specific pose
             const model = await plugin.builders.structure.createModel(trajectory, { modelIndex: poseIndex });
-            
+
             // 5. Create Structure from that specific model
             const structure = await plugin.builders.structure.createStructure(model);
 
             // 6. Apply Visual Representation (Cartoon for protein, Ball & Stick for ligand)
             await plugin.builders.structure.representation.applyPreset(structure, 'default');
-            
+
             // 7. Auto-focus the camera on the structure
             plugin.managers.camera.reset();
 
@@ -141,28 +141,28 @@ const Docking = () => {
     return (
         <div className="main-content">
             <div className="docking-container-wrapper">
-                
+
                 <div className="docking-header">
                     <button className="primary-btn" onClick={() => navigate(`/dashboard/${projectId}`)}>
                         ← Back to Dashboard
                     </button>
                     <h2 style={{ margin: 0 }}>Molecular Docking: {projectId}</h2>
-                    <div style={{ width: '130px' }} /> 
+                    <div style={{ width: '130px' }} />
                 </div>
 
                 <div className="docking-grid">
                     {/* Controls */}
                     <div className="card" style={{ margin: 0, padding: '24px' }}>
                         <h3 style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '15px' }}>CONTROLS</h3>
-                        
+
                         <div style={{ background: '#111', padding: '12px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #222' }}>
                             <div style={{ color: '#4ade80', fontSize: '0.8rem' }}>• 3D Engine: Ready</div>
                             <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>• Project ID: {projectId}</div>
                         </div>
 
                         <label style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '5px' }}>LIGAND (SMILES)</label>
-                        <textarea 
-                            className="technical-input" 
+                        <textarea
+                            className="technical-input"
                             style={{ background: '#000', border: '1px solid var(--border)', color: 'white', padding: '12px', borderRadius: '6px', resize: 'none', height: '80px', marginBottom: '15px', width: '100%', boxSizing: 'border-box' }}
                             value={smiles}
                             onChange={(e) => setSmiles(e.target.value)}
@@ -177,8 +177,8 @@ const Docking = () => {
                                 <h3 style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '10px' }}>DOCKING POSES</h3>
                                 <div className="pose-table-container">
                                     {poses.map((p) => (
-                                        <div 
-                                            key={p.id} 
+                                        <div
+                                            key={p.id}
                                             className={`pose-row ${activePose === p.id ? 'active' : ''}`}
                                             onClick={() => selectPose(p.id)}
                                         >

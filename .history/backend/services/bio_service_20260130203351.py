@@ -100,7 +100,7 @@ class ProteinManager:
             pymol.cmd.zoom("p", buffer=15)
             fname = f"{pdb_id}_viz.png"
             pymol.cmd.png(os.path.join(IMG_DIR, fname), width=600, height=400, ray=1)
-            return f"http://localhost:8000/static/{fname}"
+            return f"http://https://g5gd0v28-8000.usw3.devtunnels.ms/static/{fname}"
         except: return None
 
 class RetroManager:
